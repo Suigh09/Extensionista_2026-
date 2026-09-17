@@ -1,0 +1,24 @@
+id,funcionalidade,aluno,professor,secretaria,admin,avaliador_contextual,publico,estado
+UC-001,Autenticar e encerrar sessão,E,E,E,E,E,-,IMP
+UC-002,Consultar o próprio perfil,C,C,C,C,C,-,IMP
+UC-003,Criar e listar usuários,-,-,-,E,-,-,IMP
+UC-004,Gerenciar cursos disciplinas e turmas,-,-,-,E,-,-,IMP
+UC-005,Gerenciar a própria sala acadêmica,-,E,C,C,-,-,IMP
+UC-006,Incluir aluno ou solicitar transferência,-,E,C,C,-,-,IMP
+UC-007,Decidir transferência,-,-,D,D,-,-,IMP
+UC-008,Gerenciar competências próprias,-,E,-,-,-,-,IMP
+UC-009,Criar consultar e editar projeto próprio,E,C,-,C,-,-,IMP
+UC-010,Gerenciar convites de grupo,E,C,-,C,-,-,IMP
+UC-011,Submeter proposta,E,C,-,C,-,-,IMP
+UC-012,Revisar proposta,C,D,-,C,-,-,IMP
+UC-013,Publicar follow-up e anexos,E,E,-,C,-,-,IMP
+UC-014,Configurar e aplicar marcos,C,E,-,C,-,-,IMP
+UC-015,Consultar timeline,C,C,-,C,C,-,IMP
+UC-016,Formar parceria interdisciplinar,E,C,-,C,-,-,IMP
+UC-017,Encaminhar projeto à Mostra,C,E,C,C,-,-,PLN
+UC-018,Definir data local e avaliador,C,C,E,E,C,-,PLN
+UC-019,Avaliar grupo na Mostra,C,C,C,C,E,-,PLN
+UC-020,Registrar notas individuais,C,E,C,C,-,-,PLN
+UC-021,Aprovar documento publicável,C,D,C,C,-,-,PLN
+UC-022,Publicar ou retirar item do acervo,C,C,E,E,-,-,PLN
+UC-023,Consultar acervo publicado,C,C,C,C,C,C,PLN

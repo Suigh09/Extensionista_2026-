@@ -1,0 +1,29 @@
+name: CI
+
+# Placeholder de integração contínua. Ainda não há código-fonte no repositório,
+# então este workflow apenas valida a estrutura básica. Substitua os passos
+# marcados com TODO assim que o stack (linguagem/framework) for definido —
+# ex.: instalar dependências, rodar lint e testes automatizados.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sanity check da documentação
+        run: |
+          test -f documentos/README.md
+          test -f LICENSE
+          echo "Estrutura básica do repositório OK."
+
+      # TODO: instalar dependências do projeto (ex.: setup-node, setup-python)
+      # TODO: rodar lint
+      # TODO: rodar testes automatizados
