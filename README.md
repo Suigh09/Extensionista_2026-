@@ -3,6 +3,19 @@
 Trabalho extensionista 2026 segundo semestre — Plataforma Extensionista, para controle e
 acompanhamento de projetos de extensão, avaliação/premiação e acervo/publicação.
 
+# Apresentação do Projeto 
+
+Visão Geral: O presente documento consolida os artefatos de análise, modelagem e
+especificação funcional da Plataforma Extensionista.
+
+Equipe Desenvolvedora: Gustavo (DEV), Mauricio (NEGÒCIO), Bruno (DEV), Carlos (DEV) e Enzo (NEGÓCIO).
+
+Justificativa e Objetivo: A Plataforma Extensionista é uma aplicação web baseada no
+conceito de desk manager estruturada para otimizar o acompanhamento, a avaliação e a
+organização do acervo de projetos extensionistas da instituição. O sistema mitiga a
+complexidade e o esforço manual associados à gestão acadêmica tradicional, proporcionando
+maior precisão nas avaliações docentes e transparência contínua para os discentes. 
+
 ## Estrutura do repositório
 
 ```
