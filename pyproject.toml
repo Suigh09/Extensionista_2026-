@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["backend/**/migrations"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "UP"]
+ignore = ["S101"]
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/*" = ["S106", "S107"]
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["backend"]
+testpaths = ["backend/tests"]
+addopts = "-ra --strict-markers"
+markers = ["unit: isolated unit tests", "integration: framework and database integration", "api: API contract", "security: permission and security", "regression: permanent regression"]
+[tool.coverage.run]
+source = ["backend"]
+omit = ["*/migrations/*", "*/manage.py", "*/asgi.py", "*/wsgi.py"]
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
