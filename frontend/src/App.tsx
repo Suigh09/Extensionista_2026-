@@ -17,7 +17,7 @@ type Page='home'|'projects'|'project-create'|'project'|'collaborations'|'rooms'|
 const pageTitles:Record<Page,string>={home:'Início',projects:'Projetos','project-create':'Criar projeto',project:'Projeto',collaborations:'Colaborações Acadêmicas',rooms:'Salas',evaluations:'Avaliações',archive:'Acervo',admin:'Administração',profile:'Meu perfil',showcase:'Agenda da Mostra','showcase-presence':'Registro de presença','publication-documents':'Documento publicável',publication:'Publicação no acervo',acervo:'Acervo publicado'}
 const allowedPages=new Set<Page>(Object.keys(pageTitles) as Page[])
 function pageFromHash():Page{const value=window.location.hash.replace('#/','');if(value==='projects/new')return'project-create';if(value.startsWith('projects/'))return'project';if(value.startsWith('publication-documents/'))return'publication-documents';if(value.startsWith('publication/')&&!value.startsWith('publication-documents/'))return'publication';return allowedPages.has(value as Page)?value as Page:'home'}
-function projectIdFromHash(){const page=pageFromHash();if(page==='project'||page==='publication-documents'||page==='publication'){const match=window.location.hash.match(/#\/(?:project|publication-documents|publication)\/([a-f0-9-]+)/);return match?match[1]:''}return ''}
+function projectIdFromHash(){const page=pageFromHash();if(page==='project'||page==='publication-documents'||page==='publication'){const match=window.location.hash.match(/#\/projects?\/([a-f0-9-]+)/);return match?match[1]:''}return ''}
 function navigateTo(hash:string){window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))}
 function markChangesSaved(){window.dispatchEvent(new Event('platform:changes-saved'))}
 
