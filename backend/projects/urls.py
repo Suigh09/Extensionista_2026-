@@ -25,6 +25,16 @@ from .lifecycle_views import (
     ThemeListView,
     ThemeStudentsView,
 )
+from .showcase_views import (
+    AcervoListView,
+    PublicationDocumentDownloadView,
+    PublicationDocumentListCreateView,
+    PublicationDocumentReviewView,
+    PublicationListCreateView,
+    PublicationWithdrawView,
+    ShowcaseEntryDetailView,
+    ShowcaseEntryListCreateView,
+)
 from .views import (
     AcceptCollaborationApplicationView,
     AcceptInvitationView,
@@ -117,4 +127,35 @@ urlpatterns = [
         UsableRubricsView.as_view(),
     ),
     path("<uuid:pk>/", ProjectDetailView.as_view(), name="project-detail"),
+    # Sprint 7 — Mostra
+    path("showcase/", ShowcaseEntryListCreateView.as_view(), name="showcase-list"),
+    path(
+        "showcase/<uuid:entry_id>/",
+        ShowcaseEntryDetailView.as_view(),
+        name="showcase-detail",
+    ),
+    # Sprint 7 — Documento publicável
+    path(
+        "<uuid:project_id>/publication-documents/",
+        PublicationDocumentListCreateView.as_view(),
+        name="publication-document-list",
+    ),
+    path(
+        "publication-documents/<uuid:document_id>/review/",
+        PublicationDocumentReviewView.as_view(),
+        name="publication-document-review",
+    ),
+    path(
+        "publication-documents/<uuid:document_id>/download/",
+        PublicationDocumentDownloadView.as_view(),
+        name="publication-document-download",
+    ),
+    # Sprint 7 — Publicação/acervo
+    path("publications/", PublicationListCreateView.as_view(), name="publication-list"),
+    path(
+        "publications/<uuid:publication_id>/withdraw/",
+        PublicationWithdrawView.as_view(),
+        name="publication-withdraw",
+    ),
+    path("acervo/", AcervoListView.as_view(), name="acervo-list"),
 ]

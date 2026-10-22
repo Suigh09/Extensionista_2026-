@@ -70,6 +70,11 @@ class Notification(models.Model):
         PROJECT_FORWARDED = "PROJECT_FORWARDED", "Encaminhamento recebido"
         EVALUATOR_DESIGNATED = "EVALUATOR_DESIGNATED", "Avaliador designado"
         EVALUATION_CONCLUDED = "EVALUATION_CONCLUDED", "Avaliação concluída"
+        DOCUMENT_PENDING = "DOCUMENT_PENDING", "Documento pendente"
+        DOCUMENT_APPROVED = "DOCUMENT_APPROVED", "Documento aprovado"
+        DOCUMENT_REJECTED = "DOCUMENT_REJECTED", "Documento reprovado"
+        PUBLICATION_CREATED = "PUBLICATION_CREATED", "Publicação criada"
+        PUBLICATION_WITHDRAWN = "PUBLICATION_WITHDRAWN", "Publicação retirada"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

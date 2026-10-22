@@ -125,3 +125,29 @@ export const submitGrades=(groupId:string,data:{rubric:string;comment:string;ite
 export const concludeEvaluation=(groupId:string)=>request<GradeSubmission>(`/projects/groups/${groupId}/conclude/`,{method:'POST',body:'{}'})
 export const individualGrades=(studentId:string)=>request<{current:IndividualGrade|null;history:IndividualGrade[]}>(`/academic/students/${studentId}/individual-grade/`)
 export const gradeIndividual=(studentId:string,data:{value:string;comment:string})=>request<IndividualGrade>(`/academic/students/${studentId}/individual-grade/`,{method:'POST',body:JSON.stringify(data)})
+
+export type ShowcaseStatus='PENDING'|'SCHEDULED'|'PRESENTED'|'ABSENT'|'CANCELLED'
+export type ShowcaseEntry={id:string;group:string;group_name:string;project_id:string;project_name:string;date:string;location:string;status:ShowcaseStatus;decided_by:string|null;decided_by_name:string|null;notes:string;is_evaluator:boolean;created_at:string;updated_at:string}
+export type ShowcaseEntryCreate={group:string;date:string;location:string}
+export const listShowcaseEntries=()=>request<ShowcaseEntry[]>('/projects/showcase/')
+export const createShowcaseEntry=(data:ShowcaseEntryCreate)=>request<ShowcaseEntry>('/projects/showcase/',{method:'POST',body:JSON.stringify(data)})
+export const recordPresence=(entryId:string,status:'PRESENTED'|'ABSENT',notes='')=>request<ShowcaseEntry>(`/projects/showcase/${entryId}/`,{method:'POST',body:JSON.stringify({status,notes})})
+export const cancelShowcaseEntry=(entryId:string,reason='')=>request<ShowcaseEntry>(`/projects/showcase/${entryId}/`,{method:'DELETE',body:JSON.stringify({reason})})
+
+export type PublicationDocumentStatus='PENDING'|'APPROVED'|'REJECTED'
+export type PublicationDocument={id:string;project:string;project_name:string;version:number;original_name:string;content_type:string;size:number;status:PublicationDocumentStatus;review:string|null;reviewed_by_name:string|null;reviewed_at:string|null;consent_given:boolean;consent_at:string|null;consent_by_name:string|null;generated_by_name:string;download_url:string;created_at:string}
+export type PublicationDocumentCreate={project:string;consent_given:boolean}
+export const listPublicationDocuments=(projectId:string)=>request<PublicationDocument[]>(`/projects/${projectId}/publication-documents/`)
+export const createPublicationDocument=(data:{project:string;file:File;consent_given:boolean})=>{const form=new FormData();form.append('pdf',data.file);if(data.consent_given)form.append('consent_given','true');return request<PublicationDocument>(`/projects/${data.project}/publication-documents/`,{method:'POST',body:form})}
+export const reviewPublicationDocument=(documentId:string,status:'APPROVED'|'REJECTED',review='')=>request<PublicationDocument>(`/projects/publication-documents/${documentId}/review/`,{method:'POST',body:JSON.stringify({status,review})})
+export const publicationDocumentDownloadUrl=(documentId:string)=>`${API}/projects/publication-documents/${documentId}/download/`
+
+export type Publication={id:string;project:string;project_name:string;document:string;document_version:number;document_status:string;published_at:string|null;withdrawn_at:string|null;withdrawal_reason:string|null;withdrawn_by_name:string|null;is_published:boolean;created_at:string;updated_at:string}
+export type PublicationCreate={project:string;document:string}
+export type PublicationWithdraw={reason:string}
+export const listPublications=()=>request<Publication[]>('/projects/publications/')
+export const publishProject=(data:PublicationCreate)=>request<Publication>('/projects/publications/',{method:'POST',body:JSON.stringify(data)})
+export const withdrawPublication=(publicationId:string,reason='')=>request<Publication>(`/projects/publications/${publicationId}/withdraw/`,{method:'POST',body:JSON.stringify({reason})})
+
+export type AcervoItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string}
+export const listAcervo=(q='')=>request<AcervoItem[]>(`/projects/acervo/?q=${encodeURIComponent(q)}`)

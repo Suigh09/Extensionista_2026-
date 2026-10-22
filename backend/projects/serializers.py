@@ -2,6 +2,7 @@ from html import escape
 from html.parser import HTMLParser
 
 from academic.models import ClassOffering, StudentProfile
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from .models import (
@@ -23,7 +24,10 @@ from .models import (
     ProjectGroup,
     ProjectMilestone,
     ProjectTheme,
+    Publication,
+    PublicationDocument,
     Rubric,
+    ShowcaseEntry,
 )
 
 
@@ -677,4 +681,237 @@ class IndividualGradeSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = fields
+
+
+class ShowcaseEntrySerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(source="group.name", read_only=True, default="")
+    project_id = serializers.UUIDField(source="group.project_id", read_only=True)
+    project_name = serializers.CharField(source="group.project.name", read_only=True, default="")
+    decided_by_name = serializers.CharField(
+        source="decided_by.get_full_name", read_only=True, default=None
+    )
+    is_evaluator = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ShowcaseEntry
+        fields = [
+            "id",
+            "group",
+            "group_name",
+            "project_id",
+            "project_name",
+            "date",
+            "location",
+            "status",
+            "decided_by",
+            "decided_by_name",
+            "notes",
+            "is_evaluator",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "group",
+            "decided_by",
+            "decided_by_name",
+            "is_evaluator",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_is_evaluator(self, entry):
+        user = getattr(self.context.get("request"), "user", None)
+        if not user or user.role != "PROFESSOR":
+            return False
+        profile = getattr(user, "professor_profile", None)
+        return bool(profile and entry.group.evaluator_id == profile.pk)
+
+    def validate_date(self, value):
+        from django.utils import timezone
+        if value <= timezone.now():
+            raise serializers.ValidationError("A data da Mostra deve ser futura.")
+        return value
+
+    def validate_location(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Informe o local da apresentação.")
+        return value
+
+
+class ShowcaseEntryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShowcaseEntry
+        fields = ["group", "date", "location"]
+
+
+class ShowcaseEntryPresenceSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=[("PRESENTED", "Apresentado"), ("ABSENT", "Ausente")])
+    notes = serializers.CharField(
+        max_length=2000, allow_blank=True, default="", trim_whitespace=True
+    )
+
+
+class PublicationDocumentSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True, default="")
+    reviewed_by_name = serializers.CharField(
+        source="reviewed_by.user.get_full_name", read_only=True, default=None
+    )
+    generated_by_name = serializers.CharField(
+        source="generated_by.get_full_name", read_only=True
+    )
+    consent_by_name = serializers.CharField(
+        source="consent_by.get_full_name", read_only=True, default=None
+    )
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PublicationDocument
+        fields = [
+            "id",
+            "project",
+            "project_name",
+            "version",
+            "original_name",
+            "content_type",
+            "size",
+            "status",
+            "review",
+            "reviewed_by_name",
+            "reviewed_at",
+            "consent_given",
+            "consent_at",
+            "consent_by_name",
+            "generated_by_name",
+            "download_url",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project",
+            "version",
+            "original_name",
+            "content_type",
+            "size",
+            "status",
+            "review",
+            "reviewed_by_name",
+            "reviewed_at",
+            "consent_given",
+            "consent_at",
+            "consent_by_name",
+            "generated_by_name",
+            "download_url",
+            "created_at",
+        ]
+
+    def get_download_url(self, document):
+        return f"/projects/publications/documents/{document.pk}/download/"
+
+
+class PublicationDocumentCreateSerializer(serializers.ModelSerializer):
+    pdf = serializers.FileField(required=True)
+
+    class Meta:
+        model = PublicationDocument
+        fields = ["project", "pdf", "consent_given"]
+        read_only_fields = ["project"]
+
+    def validate_pdf(self, file):
+        from pathlib import Path
+        extension = Path(file.name).suffix.lower()
+        if extension != ".pdf":
+            raise serializers.ValidationError("O arquivo deve ser um PDF.")
+        if file.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("O PDF deve ter no máximo 10 MB.")
+        return file
+
+    def validate(self, attrs):
+        view = self.context.get("view")
+        project_id = view.kwargs.get("project_id") if view else None
+        if not project_id:
+            raise serializers.ValidationError({"project": "Este campo é obrigatório."})
+        from .models import Project
+        project = get_object_or_404(Project, pk=project_id)
+        attrs["project"] = project
+        from .services import accessible_project
+        request = self.context.get("request")
+        if request:
+            accessible_project(request.user, project.pk)
+        if PublicationDocument.objects.filter(project=project).exists():
+            last = PublicationDocument.objects.filter(project=project).order_by("-version").first()
+            attrs["version"] = (last.version or 0) + 1
+        else:
+            attrs["version"] = 1
+        return attrs
+
+
+class PublicationDocumentReviewSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=[("APPROVED", "Aprovado"), ("REJECTED", "Reprovado")])
+    review = serializers.CharField(
+        max_length=2000, allow_blank=True, default="", trim_whitespace=True
+    )
+
+
+class PublicationSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True, default="")
+    document_version = serializers.IntegerField(source="document.version", read_only=True)
+    document_status = serializers.CharField(source="document.status", read_only=True)
+    withdrawn_by_name = serializers.CharField(
+        source="withdrawn_by.get_full_name", read_only=True, default=None
+    )
+    is_published = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Publication
+        fields = [
+            "id",
+            "project",
+            "project_name",
+            "document",
+            "document_version",
+            "document_status",
+            "published_at",
+            "withdrawn_at",
+            "withdrawal_reason",
+            "withdrawn_by_name",
+            "is_published",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_is_published(self, obj):
+        return bool(obj.published_at and not obj.withdrawn_at)
+
+
+class PublicationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Publication
+        fields = ["project", "document"]
+
+    def validate(self, attrs):
+        project = attrs["project"]
+        document = attrs["document"]
+        if document.project_id != project.pk:
+            raise serializers.ValidationError("O documento não pertence a este projeto.")
+        if document.status != PublicationDocument.Status.APPROVED:
+            raise serializers.ValidationError("O documento precisa estar aprovado para publicar.")
+        if not document.consent_given:
+            raise serializers.ValidationError(
+                "O consentimento explícito é obrigatório para publicar."
+            )
+        from .services import accessible_project, require_approved_project
+        request = self.context.get("request")
+        if request:
+            accessible_project(request.user, project.pk)
+        require_approved_project(project)
+        return attrs
+
+
+class PublicationWithdrawSerializer(serializers.Serializer):
+    reason = serializers.CharField(
+        max_length=2000, allow_blank=True, default="", trim_whitespace=True
+    )
 
