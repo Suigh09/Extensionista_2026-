@@ -19,6 +19,7 @@ Problemas recorrentes e aprendizados para não repetir. Atualizar ao final de ca
 - **Renomear classe Django exige atualizar todos os imports**: sessão anterior renomeou `AcervoListView` → `AcervoPublicListView` sem atualizar `backend/projects/urls.py` (ImportError) e deixou `from rest_framework.permissions import AllowIsAuthenticatedOrReadOnly` (inexistente no DRF). Corrigido: `AcervoListView` restaurada (autenticada) + `AcervoPublicListView` como subclass pública.
 - **Fixture de teste incompleto quebra `npm run build`**: `frontend/src/showcase.test.tsx` usava `as Project` sem `class_offering`, `submitted_at`, `reviewed_at`, `review_feedback`, `reviewed_by`, e membros com `is_active` (campo inexistente em `Member`). Corrigido.
 - **Variável não usada quebra lint**: `safe` em `frontend/e2e/showcase.spec.ts` (`openProject`). Corrigido.
+- **Reescrever arquivo `.tsx` inteiro via `write` quebra JSX**: `frontend/src/notifications.tsx` teve erros `TS1005: ',' expected` / `TS17008: button has no corresponding closing tag` em toda reescrita. Causa provável: perda de detalhes estruturais ao reconstruir expressões JSX longas numa linha. Solução: `git checkout -- <arquivo>` para restaurar + **edições pontuais via `edit`**. Arquivo `.tsx` não testado não deve ser reescrito por inteiro.
 
 ## Falhas pré-existentes conhecidas
 

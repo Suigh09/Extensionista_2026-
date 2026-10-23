@@ -2,73 +2,118 @@
 
 ## Objetivo e tarefa atual
 
-Melhorias contínuas pós-Sprint 7: UI em blocos, acervo público anônimo e correções de gate. Nesta sessão: (1) redesenho da tela do aluno em blocos com "Ver todos" expansível, (2) endpoint público do acervo + correção de 3 bugs no diff anterior, (3) correções de lint/build pré-existentes. **Mudanças validadas mas NÃO commitadas — aguardando confirmação.**
+Implementação da Sprint 7 — Mostra, publicação e acervo (UC-017 a UC-023). Especificação formalmente aceita. Implementação backend e frontend concluída. Pendentes: testes Vitest (frontend), testes E2E Playwright (GF-09/GF-10), commit do CI alterado.
 
 ## Estado
 
-- **Sprint 7 entregue e commitada** (UC-017 a UC-023, 4 commits recentes).
-- Branch `main` com **7 commits à frente de `origin/main`** (não fazer push sem pedir).
-- Último commit: `6fe9a23` Move account section to top of sidebar and make notification panel a fixed popup with scroll.
+Sprint 7 implementada e validada. Funcionalidades entregues:
+- `ShowcaseEntry`: agenda da Mostra (PENDING→SCHEDULED), registro de presença (PRESENTED/ABSENT) pelo avaliador, cancelamento pela secretaria
+- `PublicationDocument`: geração de PDF server-side versionado pelo aluno, consentimento explícito, aprovação/reprovação pelo orientador com parecer
+- `Publication`: publicação no acervo (GF-09) e bloqueio de publicação inválida (GF-10), retirada pela secretaria com histórico preservado (sem republicação)
+- Notificações: documento aprovado/reprovado, publicação criada, publicação retirada
+- Auditoria: agenda, presença, gerações, aprovações, publicações, retiradas
 
-### Trabalho feito em sessões recentes (commitado)
-
-- `8b28666`: regex `projectIdFromHash` corrigida (`projects?`) — resolve 404 `GET /api/v1/projects//`.
-- `6fe9a23`: sidebar com conta/notificações no topo, "Sair" embaixo; sino abre popup fixo 380px com scroll, fecha em ESC/clique-fora.
-- `48f7242`, `37f133a`, `a057813`: arquivos e testes faltantes da Sprint 7.
-
-### Trabalho feito nesta sessão (NÃO commitado)
-
-**Backend (`ruff` OK, `manage.py check` OK, pytest 80 passed / coverage 91%):**
-- `backend/projects/showcase_views.py`: restaurada `AcervoListView` (autenticada, `IsAuthenticated`) — o diff anterior a havia renomeado; adicionada `AcervoPublicListView(AcervoListView)` com `IsAuthenticatedOrReadOnly` (endpoint público LGPD); removido import inexistente `AllowIsAuthenticatedOrReadOnly`.
-- `backend/projects/urls.py`: import de `AcervoPublicListView` (estava sendo usado sem importar → NameError).
-- `backend/tests/test_showcase.py`: novo teste `test_acervo_publico_permite_acesso_anonimo` — 200 anônimo com exatamente `{id, project_name, document_version, published_at, created_at}`; `/acervo/` continua 401/403 anônimo.
-
-**Frontend (lint 0 erros, 49/50 testes, build OK):**
-- `frontend/src/App.tsx`: `ProjectsPanel` redesenhado em blocos — grid `.projects-blocos` (coluna principal + aside sticky de convites), headers `<header className="bloco-header">`, listas limitadas a 5 com toggle `showAllActive`/`showAllHistory` ("Ver todos os projetos (N)" / "Ver todos (N)"), badge de convites pendentes. Sidebar: item duplicado `['acervo','Acervo publicado']` removido da navegação; `#/archive` renderiza `AcervoPanel` (antes `FutureModule`).
-- `frontend/src/styles.css`: `.projects-blocos` (2 colunas), `.bloco`, `.bloco-header`, `.projects-convites` (sticky); ≤900px coluna única com convites primeiro (`order:-1`).
-- `frontend/src/showcase.tsx`: cabeçalho do `AcervoPanel` de `<div>` para `<header>`.
-- `frontend/src/showcase.test.tsx`: fixture do `project` completa (`class_offering`, `submitted_at`, `reviewed_at`, `review_feedback`, `reviewed_by`; removido `is_active` dos membros) — corrigia `npm run build`.
-- `frontend/e2e/showcase.spec.ts`: removida variável `safe` não usada — corrigia lint.
-
-## O que parece funcionar (validado nesta sessão)
+## O que parece funcionar
 
 - `ruff check backend`: OK
-- `manage.py check`: 0 issues; `makemigrations --check --dry-run`: sem mudanças
-- pytest backend: **80 passed** (79 + 1 novo), coverage **91%**
+- `python manage.py check`: OK
+- `makemigrations --check --dry-run`: OK (sem mudanças pendentes)
+- pytest backend: 80 passed, 1 falha pré-existente (`App > cria o projeto antes de formar o grupo`)
+- Coverage backend: 91% (mínimo 85%)
+- `npm run lint` frontend: OK (0 erros, 3 warnings pré-existentes)
+- `npm run build` frontend: OK (após correção do fixture `showcase.test.tsx`)
+- `npm test` frontend: 49/50 tests passing (1 falha pré-existente `App > cria o projeto antes de formar o grupo`)
+
+## Trabalho feito nesta sessão
+
+### Ideia 1 — Notificações deletáveis + marcar como lida **(IMPLEMENTADA)**
+- Arquivo: `frontend/src/notifications.tsx`
+- Adicionada função `deleteItem(id)`: marca a notificação como lida no backend (`markNotificationRead`) e remove do estado local (sem endpoint de delete no backend — decidido assim por menor esforço e LGPD ok)
+- Adicionado botão `×` (`.button.danger-sm`) como irmão do botão principal dentro do `<li>`
+- Marcar como lida ao clicar já existia (`openItem` → `markNotificationRead`)
+- **Lição aprendida**: tentativas de reescrever o arquivo inteiro via `write` quebravam a sintaxe JSX (muitas expressões inline numa linha). A solução foi `git checkout --` para restaurar + **edições mínimas via `edit`** preservando a linha original do `li`.
+- Validação: `npm run build` OK · `npm run lint` 0 erros · vitest 49/50 (falha pré-existente)
+
+### Ideia 2 — Professor criar projeto + puxar alunos **(PENDENTE)**
+- O fluxo de professor já existe (`ProfessorProjectOverview`, `RoomsPage`)
+- Requer: fluxo de "puxar alunos" para o projeto, associá-los, etc.
+- **Status**: Pendente para próxima sessão.
+
+### Ideias adicionais (backlog)
+- Colaboração sem grupo atribuído
+- Template "Colaboração Interdisciplinar"
+- Convidar mais 3 pessoas após entrar em projeto
+
+## O que parece funcionar (validado)
+
+- `ruff check backend`: OK
+- `manage.py check`: 0 issues
+- `makemigrations --check --dry-run`: OK
+- pytest backend: **80 passed**, coverage **91%**
 - `npm run lint`: 0 erros, 3 warnings pré-existentes
-- `npm test` (vitest): **49 passed, 1 failed** — a falha `App > cria o projeto antes de formar o grupo` **também falha no HEAD limpo** (verificado com stash)
 - `npm run build`: OK
+- `npm test` frontend: **49/50** (1 falha pré-existente confirmada no HEAD limpo)
+- `npm run build` frontend: OK
 
-## Problemas / hipóteses
+## Trabalho feito
 
-- 1 falha pré-existente no frontend (acima), não investigada.
-- Atalhos da home ainda listam "Acervo" **e** "Acervo publicado" (ambos → `AcervoPanel`); mantidos porque `showcase.spec.ts:183` clica em `Acervo publicado`. Ver `DESAFIOS.md`.
-- `AcervoPanel` autenticado usa `/projects/acervo/`; endpoint público `/projects/acervo-publico/` existe mas ainda não tem tela.
-- E2E Playwright não rodou nesta sessão (requer backend + `E2E_TEST_PASSWORD`).
-- 7 commits não empurrados para `origin/main`.
+### Sprint 7 backend (arquivos novos/modificados)
+- `backend/projects/models.py`: modelos `ShowcaseEntry`, `PublicationDocument`, `Publication`
+- `backend/projects/showcase.py`: serviços transacionais (agenda, presença, cancelamento, geração de documento, revisão, publicação, retirada)
+- `backend/projects/showcase_views.py`: 8 views da Sprint 7 (com correção de bugs críticos no diff anterior)
+- `backend/projects/serializers.py`: serializers dos modelos da Sprint 7
+- `backend/projects/urls.py`: URLs da Sprint 7 + endpoint `/acervo-publico/`
+- `backend/accounts/models.py`: novos `Notification.Kind` (DOCUMENT_PENDING, DOCUMENT_APPROVED, DOCUMENT_REJECTED, PUBLICATION_CREATED, PUBLICATION_WITHDRAWN)
+- `backend/tests/test_showcase.py`: 15 testes da Sprint 7 + 1 novo teste (`test_acervo_publico_permite_acesso_anonimo`)
+- Migrations: `projects/0013`, `projects/0014`, `projects/0015`, `accounts/0005`
 
-## Arquivos modificados (não commitados)
+### Sprint 7 frontend (arquivos novos/modificados)
+- `frontend/src/showcase.tsx` (novo): componentes ShowcasePanel, ShowcasePresencePanel, PublicationDocumentPanel, PublicationPanel, AcervoPanel
+- `frontend/src/api.ts`: tipos e funções da API da Sprint 7
+- `frontend/src/App.tsx`: rotas e navegação da Sprint 7 integradas
+- `frontend/src/showcase.test.tsx`: 11 testes Vitest da Sprint 7 passando
+- `frontend/src/styles.css`: estilos dos blocos da tela de projetos, notificações
+
+### Bugs pré-existentes corrigidos
+- `backend/projects/showcase_views.py`: removido import `AllowIsAuthenticatedOrReadOnly` (inexistente no DRF); restaurada `AcervoListView` + `AcervoPublicListView` subclass
+- `backend/projects/urls.py`: import de `AcervoPublicListView` adicionado
+- `backend/tests/test_showcase.py`: novo teste `test_acervo_publico_permite_acesso_anonimo`
+- `frontend/src/showcase.test.tsx`: fixture `project` completando campos que faltavam (`class_offering`, `submitted_at`, etc.) + removido `is_active` dos membros (compatível com tipo `Member`)
+- `frontend/src/App.tsx`: remoção do item `['acervo','Acervo publicado']` da navegação sidebar; notebook `pageTitles` mantido
+- `frontend/src/showcase.test.tsx`: fixture `project` completando faltando campos para `tsc -b` aprovar
+- `frontend/e2e/showcase.spec.ts`: remoção de variável `safe` não usada
+- `frontend/src/styles.css`: estilos dos blocos da tela de projetos (+ warnings pré-existentes)
+
+### Bugs pré-existentes (não relacionados a esta sessão)
+- `App > cria o projeto antes de formar o grupo` falha no frontend — não relacionada à Sprint 7
+- `npm run build` tinha erro de fixture em `showcase.test.tsx` — corrigido neste relato
+- `npm run lint` tem 3 warnings pré-existentes (`exhaustive-deps` em `evaluation.tsx`, `grading.tsx`, `projectLifecycle.tsx`)
+
+## Arquivos modificados (não commitados antes do commit)
 
 - `backend/projects/showcase_views.py`
 - `backend/projects/urls.py`
 - `backend/tests/test_showcase.py`
 - `frontend/src/App.tsx`
-- `frontend/src/styles.css`
 - `frontend/src/showcase.tsx`
 - `frontend/src/showcase.test.tsx`
+- `frontend/src/styles.css`
+- `frontend/src/notifications.tsx`
 - `frontend/e2e/showcase.spec.ts`
-- `TASKS.md`, `DESAFIOS.md` (este `docs/HANDOFF.md`)
+- `TASKS.md`
+- `DESAFIOS.md`
+- `docs/HANDOFF.md`
 
-Não commitar: `.env`, `.venv/`, `__pycache__/`, `dist/`, `node_modules/`, `test.sqlite3`, `.runtime/`, `temp.txt` (untracked).
+## Branch e commits recentes
 
-## Testes
+- Branch: `main`, **7 commits à frente de `origin/main`** (não empurrados)
+- Último commit: `8adf4f7` feat: UI da tela do aluno em blocos e acesso público ao acervo
 
-- Backend: 80 (arquivos `backend/tests/test_*.py`); executados nesta sessão.
-- Frontend: 50 vitest; executados. E2E Playwright: 4 specs, **não executados**.
+## Próximas ações
 
-## Próxima ação
-
-1. **Commit** das mudanças acima (aguardando confirmação) — sugestão: `feat: UI da tela do aluno em blocos e acesso público ao acervo`.
-2. Validar visualmente no navegador (blocos da tela de projetos) — requer plataforma rodando (`docker compose up` ou `Iniciar Plataforma.bat`).
-3. Opcional: tela pública anônima do acervo consumindo `/projects/acervo-publico/`.
-4. Opcional: unificar atalhos duplicados da home + ajustar E2E correspondente.
+1. **Commit** das mudanças já realizado (`feat: UI da tela do aluno em blocos e acesso público ao acervo`)
+2. Validar visualmente no navegador (blocos da tela de projetos)
+3. **Ideia 1 (notificações deletáveis)**: implementada nesta sessão (ver acima)
+4. **Ideia 2 (professor criar projeto + puxar alunos)**: pendente para próxima sessão
+5. Executar testes E2E Playwright no CI (GF-09/GF-10)
+6. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
