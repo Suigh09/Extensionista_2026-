@@ -27,6 +27,7 @@ from .lifecycle_views import (
 )
 from .showcase_views import (
     AcervoListView,
+    AcervoPublicListView,
     PublicationDocumentDownloadView,
     PublicationDocumentListCreateView,
     PublicationDocumentReviewView,
@@ -158,4 +159,5 @@ urlpatterns = [
         name="publication-withdraw",
     ),
     path("acervo/", AcervoListView.as_view(), name="acervo-list"),
+    path("acervo-publico/", AcervoPublicListView.as_view(), name="acervo-publico"),
 ]

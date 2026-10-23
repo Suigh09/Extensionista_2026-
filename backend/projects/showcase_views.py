@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -319,3 +319,9 @@ class AcervoListView(generics.ListAPIView):
             for item in queryset
         ]
         return Response(data)
+
+
+class AcervoPublicListView(AcervoListView):
+    """Consulta pública do acervo — mesmo conteúdo LGPD, sem exigir sessão."""
+
+    permission_classes = [IsAuthenticatedOrReadOnly]

@@ -108,7 +108,6 @@ async function uiLogout(page:Page){
 
 async function openProject(page:Page,name:string){
   await page.getByRole('button',{name:'Projetos'}).first().click()
-  const safe=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
   const byArticle=page.locator('article').filter({has:page.getByRole('heading',{name,exact:true})})
   await expect(byArticle.first()).toBeVisible({timeout:15000})
   await byArticle.first().getByRole('button',{name:/Abrir/}).click()

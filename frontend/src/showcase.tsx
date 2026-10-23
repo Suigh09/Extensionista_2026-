@@ -340,13 +340,13 @@ export function AcervoPanel(){
   useEffect(()=>{void refresh()},[refresh])
   return (
     <section className="profile-section" aria-labelledby="acervo-title">
-      <div className="showcase-header">
+      <header className="showcase-header">
         <div>
           <span className="eyebrow">Acervo</span>
           <h2 id="acervo-title">Acervo de projetos publicados</h2>
           <p>Consulta a projetos apresentados na Mostra e publicados com documento aprovado.</p>
         </div>
-      </div>
+      </header>
       {message&&<p role="status" className="alert">{message}</p>}
       <div className="subheading">
         <h3>Pesquisa</h3>

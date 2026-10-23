@@ -503,6 +503,53 @@ def test_acervo_returns_only_published_projects(academic_context):
 
 
 @pytest.mark.django_db
+def test_acervo_publico_permite_acesso_anonimo(academic_context):
+    _, _, client, _, _, _, teacher, secretary, _, _ = setup(academic_context)
+    project = approved_project(client, academic_context[0])
+    set_evaluator(project["id"], teacher.handler._force_user)
+    secretary.post(
+        "/api/v1/projects/showcase/",
+        {
+            "group": project["groups"][0]["id"],
+            "date": "2026-12-10T14:00:00Z",
+            "location": "Auditório Central",
+        },
+        format="json",
+    )
+    entry = ShowcaseEntry.objects.get(group__project_id=project["id"])
+    teacher.post(
+        f"/api/v1/projects/showcase/{entry.id}/",
+        {"status": "PRESENTED"},
+        format="json",
+    )
+    doc = client.post(
+        f"/api/v1/projects/{project['id']}/publication-documents/",
+        {"pdf": pdf(), "consent_given": "true"},
+        format="multipart",
+    ).json()
+    teacher.post(
+        f"/api/v1/projects/publication-documents/{doc['id']}/review/",
+        {"status": "APPROVED", "review": "OK"},
+        format="json",
+    )
+    client.post(
+        "/api/v1/projects/publications/",
+        {"project": project["id"], "document": doc["id"]},
+        format="json",
+    )
+
+    anonymous = APIClient()
+    public = anonymous.get("/api/v1/projects/acervo-publico/")
+    assert public.status_code == 200
+    assert project["name"] in [item["project_name"] for item in public.json()]
+    for item in public.json():
+        assert set(item) == {"id", "project_name", "document_version", "published_at", "created_at"}
+
+    # O endpoint autenticado continua exigindo sessao
+    assert anonymous.get("/api/v1/projects/acervo/").status_code in (401, 403)
+
+
+@pytest.mark.django_db
 def test_showcase_entry_idempotency_one_per_group(academic_context):
     _, _, client, _, _, _, teacher, secretary, _, _ = setup(academic_context)
     project = approved_project(client, academic_context[0])
