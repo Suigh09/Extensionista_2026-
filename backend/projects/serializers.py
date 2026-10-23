@@ -194,15 +194,22 @@ class ProjectCreateSerializer(ProjectSerializer):
     theme = serializers.PrimaryKeyRelatedField(queryset=ProjectTheme.objects.all())
     leader = serializers.IntegerField(write_only=True, required=False, min_value=1)
     replace_active = serializers.BooleanField(write_only=True, required=False, default=False)
+    student_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        write_only=True,
+        required=False,
+        allow_empty=True,
+    )
 
     class Meta(ProjectSerializer.Meta):
-        fields = ProjectSerializer.Meta.fields + ["replace_active", "leader"]
+        fields = ProjectSerializer.Meta.fields + ["replace_active", "leader", "student_ids"]
 
     def create(self, validated_data):
         validated_data.pop("replace_active", None)
         from .lifecycle import create_from_theme
         return create_from_theme(actor=self.context["request"].user,
             theme_id=validated_data.pop("theme").pk, leader_id=validated_data.pop("leader", None),
+            student_ids=validated_data.pop("student_ids", None),
             name=validated_data["name"], about=validated_data["about"])
 
     def validate_class_offering(self, offering):

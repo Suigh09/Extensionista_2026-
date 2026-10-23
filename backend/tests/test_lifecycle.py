@@ -137,6 +137,90 @@ def test_professor_creation_assignment_leader_and_unique_group(academic_context)
 
 
 @pytest.mark.django_db
+def test_assign_student_notifies_included_student(academic_context):
+    from accounts.models import Notification
+
+    _, profile, _ = academic_context[2](1)
+    _, second, _ = academic_context[2](2)
+    room = profile.room_memberships.get().room
+    teacher = APIClient()
+    teacher.force_authenticate(room.responsible_professor.user)
+    theme = ProjectTheme.objects.create(room=room, title="Tema", description="Orientações")
+    project = teacher.post(
+        "/api/v1/projects/",
+        {
+            "name": "Projeto com notificação",
+            "about": "Proposta",
+            "theme": str(theme.pk),
+            "leader": profile.pk,
+        },
+        format="json",
+    ).json()
+    assert (
+        teacher.post(
+            f"/api/v1/projects/{project['id']}/assign-student/",
+            {"student_id": second.pk},
+            format="json",
+        ).status_code
+        == 200
+    )
+    notice = Notification.objects.get(user=second.user)
+    assert notice.kind == Notification.Kind.PROJECT_MEMBER_ADDED
+    assert str(notice.project_id) == project["id"]
+    assert "incluiu" in notice.body
+
+
+@pytest.mark.django_db
+def test_professor_creation_with_batch_students(academic_context):
+    from accounts.models import Notification
+
+    _, profile, _ = academic_context[2](1)
+    _, second, _ = academic_context[2](2)
+    _, third, _ = academic_context[2](3)
+    _, fourth, _ = academic_context[2](4)
+    room = profile.room_memberships.get().room
+    teacher = APIClient()
+    teacher.force_authenticate(room.responsible_professor.user)
+    theme = ProjectTheme.objects.create(room=room, title="Tema", description="Orientações")
+    created = teacher.post(
+        "/api/v1/projects/",
+        {
+            "name": "Projeto em lote",
+            "about": "Proposta",
+            "theme": str(theme.pk),
+            "leader": profile.pk,
+            "student_ids": [second.pk, third.pk, fourth.pk],
+        },
+        format="json",
+    )
+    assert created.status_code == 201
+    project = created.json()
+    assert project["group"]["member_count"] == 4
+    assert ActiveGroupSlot.objects.filter(student__in=[second, third, fourth]).count() == 3
+    assert (
+        Notification.objects.filter(
+            kind=Notification.Kind.PROJECT_MEMBER_ADDED,
+            user__in=[second.user, third.user, fourth.user],
+        ).count()
+        == 3
+    )
+    _, fifth, _ = academic_context[2](5)
+    rejected = teacher.post(
+        "/api/v1/projects/",
+        {
+            "name": "Projeto com lote inválido",
+            "about": "Proposta",
+            "theme": str(theme.pk),
+            "leader": fifth.pk,
+            "student_ids": [second.pk],
+        },
+        format="json",
+    )
+    assert rejected.status_code == 400
+    assert not Project.objects.filter(name="Projeto com lote inválido").exists()
+
+
+@pytest.mark.django_db
 def test_pause_resume_blocks_mutations_preserves_conversation_and_history(academic_context):
     offering, _, student = academic_context
     _, _, client = student(1)

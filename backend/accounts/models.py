@@ -75,6 +75,7 @@ class Notification(models.Model):
         DOCUMENT_REJECTED = "DOCUMENT_REJECTED", "Documento reprovado"
         PUBLICATION_CREATED = "PUBLICATION_CREATED", "Publicação criada"
         PUBLICATION_WITHDRAWN = "PUBLICATION_WITHDRAWN", "Publicação retirada"
+        PROJECT_MEMBER_ADDED = "PROJECT_MEMBER_ADDED", "Inclusão em projeto"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

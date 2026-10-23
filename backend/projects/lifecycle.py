@@ -78,7 +78,7 @@ def reserve_student(student, group):
 
 
 @transaction.atomic
-def create_from_theme(*, actor, theme_id, name, about, leader_id=None):
+def create_from_theme(*, actor, theme_id, name, about, leader_id=None, student_ids=None):
     theme = (
         ProjectTheme.objects.select_for_update()
         .select_related("room__responsible_professor")
@@ -120,6 +120,23 @@ def create_from_theme(*, actor, theme_id, name, about, leader_id=None):
     reserve_student(student, group)
     GroupMember.objects.create(group=group, student=student)
     record_event(actor, project, "CREATE", "", project.status, "Projeto criado a partir de tema.")
+    if student_ids:
+        if actor.role == "STUDENT":
+            raise ValidationError(
+                {"student_ids": "Somente o orientador pode associar outros alunos na criação."}
+            )
+        if student.pk in student_ids:
+            raise ValidationError(
+                {"student_ids": "O líder não deve ser repetido na lista de alunos."}
+            )
+        if len(set(student_ids)) != len(student_ids):
+            raise ValidationError({"student_ids": "Aluno repetido na lista."})
+        if len(student_ids) > 3:
+            raise ValidationError(
+                {"student_ids": "Informe no máximo 3 alunos além do líder."}
+            )
+        for extra_id in student_ids:
+            assign_student(actor=actor, project=project, student_id=extra_id)
     return project
 
 
@@ -166,6 +183,16 @@ def assign_student(*, actor, project, student_id, make_leader=False):
         )
         group.invitations.filter(invitee=student, status="PENDING").update(
             status="ACCEPTED", decided_at=timezone.now()
+        )
+        from accounts.models import Notification
+        from accounts.notifications import notify
+
+        notify(
+            student.user,
+            Notification.Kind.PROJECT_MEMBER_ADDED,
+            f"Você foi incluído em {project.name}",
+            f"{actor.get_full_name()} incluiu você neste projeto.",
+            project=project,
         )
     if make_leader:
         group.leader = student

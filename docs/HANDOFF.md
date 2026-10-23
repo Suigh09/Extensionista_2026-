@@ -18,8 +18,8 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `ruff check backend`: OK
 - `python manage.py check`: OK
 - `makemigrations --check --dry-run`: OK (sem mudanças pendentes)
-- pytest backend: 80 passed, 1 falha pré-existente (`App > cria o projeto antes de formar o grupo`)
-- Coverage backend: 91% (mínimo 85%)
+- pytest backend: 82 passed, 1 falha pré-existente (`App > cria o projeto antes de formar o grupo`)
+- Coverage backend: 92% (mínimo 85%)
 - `npm run lint` frontend: OK (0 erros, 3 warnings pré-existentes)
 - `npm run build` frontend: OK (após correção do fixture `showcase.test.tsx`)
 - `npm test` frontend: 49/50 tests passing (1 falha pré-existente `App > cria o projeto antes de formar o grupo`)
@@ -34,10 +34,14 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - **Lição aprendida**: tentativas de reescrever o arquivo inteiro via `write` quebravam a sintaxe JSX (muitas expressões inline numa linha). A solução foi `git checkout --` para restaurar + **edições mínimas via `edit`** preservando a linha original do `li`.
 - Validação: `npm run build` OK · `npm run lint` 0 erros · vitest 49/50 (falha pré-existente)
 
-### Ideia 2 — Professor criar projeto + puxar alunos **(PENDENTE)**
-- O fluxo de professor já existe (`ProfessorProjectOverview`, `RoomsPage`)
-- Requer: fluxo de "puxar alunos" para o projeto, associá-los, etc.
-- **Status**: Pendente para próxima sessão.
+### Ideia 2 — Professor criar projeto + puxar alunos **(IMPLEMENTADA)**
+- O fluxo básico já existia (professor cria com líder + `assign-student`). Estendido com duas extensões:
+  1. **Notificação ao aluno incluído**: novo `Notification.Kind.PROJECT_MEMBER_ADDED` (`accounts/migrations/0006`); `assign_student` em `lifecycle.py` chama `notify()` quando cria `GroupMember` novo
+  2. **Lote na criação**: `create_from_theme` aceita `student_ids` (máx. 3 além do líder, sem duplicatas, sem o líder); valida papel (só orientador/admin) e delega cada inclusão a `assign_student` (mesmas validações de sala/curso/vagas/transação)
+  - Serializer `ProjectCreateSerializer`: campo write-only `student_ids`
+  - Frontend `ThemeProjectCreate`: seção "Outros participantes (opcional)" com `StudentSearch` multi-seleção (máx. 3, sem duplicatas, limpa ao trocar tema)
+  - `api.ts`: `createProject` aceita `student_ids?: number[]`
+  - Testes: `test_assign_student_notifies_included_student`, `test_professor_creation_with_batch_students` (inclui validação de lote inválido não criar projeto)
 
 ### Ideias adicionais (backlog)
 - Colaboração sem grupo atribuído
@@ -49,7 +53,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `ruff check backend`: OK
 - `manage.py check`: 0 issues
 - `makemigrations --check --dry-run`: OK
-- pytest backend: **80 passed**, coverage **91%**
+- pytest backend: **82 passed**, coverage **92%**
 - `npm run lint`: 0 erros, 3 warnings pré-existentes
 - `npm run build`: OK
 - `npm test` frontend: **49/50** (1 falha pré-existente confirmada no HEAD limpo)
@@ -100,6 +104,13 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `frontend/src/styles.css`
 - `frontend/src/notifications.tsx`
 - `frontend/e2e/showcase.spec.ts`
+- `backend/accounts/models.py`
+- `backend/accounts/migrations/0006_alter_notification_kind.py`
+- `backend/projects/lifecycle.py`
+- `backend/projects/serializers.py`
+- `backend/tests/test_lifecycle.py`
+- `frontend/src/api.ts`
+- `frontend/src/projectLifecycle.tsx`
 - `TASKS.md`
 - `DESAFIOS.md`
 - `docs/HANDOFF.md`
@@ -114,6 +125,6 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 1. **Commit** das mudanças já realizado (`feat: UI da tela do aluno em blocos e acesso público ao acervo`)
 2. Validar visualmente no navegador (blocos da tela de projetos)
 3. **Ideia 1 (notificações deletáveis)**: implementada nesta sessão (ver acima)
-4. **Ideia 2 (professor criar projeto + puxar alunos)**: pendente para próxima sessão
+4. **Ideia 2 (professor criar projeto + puxar alunos)**: implementada nesta sessão (ver acima)
 5. Executar testes E2E Playwright no CI (GF-09/GF-10)
 6. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
