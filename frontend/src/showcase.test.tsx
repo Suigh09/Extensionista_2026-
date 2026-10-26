@@ -27,7 +27,7 @@ const student={id:'a1',username:'aluno',name:'Aluno Teste',email:'',role:'STUDEN
 
 const entry:ShowcaseEntry={id:'entry-1',group:'group-1',group_name:'Grupo A',project_id:'project-1',project_name:'Projeto Cidadania',date:'2026-12-10T14:00:00Z',location:'Auditório Central',status:'SCHEDULED',decided_by:'s1',decided_by_name:'Secretaria Teste',notes:'',is_evaluator:false,created_at:'2026-09-25T12:00:00Z',updated_at:'2026-09-25T12:00:00Z'}
 
-const document:PublicationDocument={id:'doc-1',project:'project-1',project_name:'Projeto Cidadania',version:1,original_name:'documento.pdf',content_type:'application/pdf',size:1024,status:'PENDING',review:null,reviewed_by_name:null,reviewed_at:null,consent_given:true,consent_at:'2026-09-25T12:00:00Z',consent_by_name:'Aluno Teste',generated_by_name:'Aluno Teste',download_url:'/projects/publication-documents/doc-1/download/',created_at:'2026-09-25T12:00:00Z'}
+const document:PublicationDocument={id:'doc-1',project:'project-1',project_name:'Projeto Cidadania',version:1,content:'',original_name:'documento.pdf',content_type:'application/pdf',size:1024,status:'PENDING',review:null,reviewed_by_name:null,reviewed_at:null,consent_given:true,consent_at:'2026-09-25T12:00:00Z',consent_by_name:'Aluno Teste',generated_by_name:'Aluno Teste',download_url:'/projects/publication-documents/doc-1/download/',created_at:'2026-09-25T12:00:00Z'}
 
 const publication:Publication={id:'pub-1',project:'project-1',project_name:'Projeto Cidadania',document:'doc-1',document_version:1,document_status:'APPROVED',published_at:'2026-09-25T12:00:00Z',withdrawn_at:null,withdrawal_reason:null,withdrawn_by_name:null,is_published:true,created_at:'2026-09-25T12:00:00Z',updated_at:'2026-09-25T12:00:00Z'}
 

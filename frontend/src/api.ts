@@ -136,11 +136,12 @@ export const recordPresence=(entryId:string,status:'PRESENTED'|'ABSENT',notes=''
 export const cancelShowcaseEntry=(entryId:string,reason='')=>request<ShowcaseEntry>(`/projects/showcase/${entryId}/`,{method:'DELETE',body:JSON.stringify({reason})})
 
 export type PublicationDocumentStatus='PENDING'|'APPROVED'|'REJECTED'
-export type PublicationDocument={id:string;project:string;project_name:string;version:number;original_name:string;content_type:string;size:number;status:PublicationDocumentStatus;review:string|null;reviewed_by_name:string|null;reviewed_at:string|null;consent_given:boolean;consent_at:string|null;consent_by_name:string|null;generated_by_name:string;download_url:string;created_at:string}
+export type PublicationDocument={id:string;project:string;project_name:string;version:number;content:string;original_name:string;content_type:string;size:number;status:PublicationDocumentStatus;review:string|null;reviewed_by_name:string|null;reviewed_at:string|null;consent_given:boolean;consent_at:string|null;consent_by_name:string|null;generated_by_name:string;download_url:string;created_at:string}
 export type PublicationDocumentCreate={project:string;consent_given:boolean}
 export const listPublicationDocuments=(projectId:string)=>request<PublicationDocument[]>(`/projects/${projectId}/publication-documents/`)
 export const createPublicationDocument=(data:{project:string;file:File;consent_given:boolean})=>{const form=new FormData();form.append('pdf',data.file);if(data.consent_given)form.append('consent_given','true');return request<PublicationDocument>(`/projects/${data.project}/publication-documents/`,{method:'POST',body:form})}
 export const reviewPublicationDocument=(documentId:string,status:'APPROVED'|'REJECTED',review='')=>request<PublicationDocument>(`/projects/publication-documents/${documentId}/review/`,{method:'POST',body:JSON.stringify({status,review})})
+export const updatePublicationDocumentContent=(documentId:string,content:string)=>request<PublicationDocument>(`/projects/publication-documents/${documentId}/content/`,{method:'PATCH',body:JSON.stringify({content})})
 export const publicationDocumentDownloadUrl=(documentId:string)=>`${API}/projects/publication-documents/${documentId}/download/`
 
 export type Publication={id:string;project:string;project_name:string;document:string;document_version:number;document_status:string;published_at:string|null;withdrawn_at:string|null;withdrawal_reason:string|null;withdrawn_by_name:string|null;is_published:boolean;created_at:string;updated_at:string}

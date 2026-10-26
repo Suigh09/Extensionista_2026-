@@ -3,7 +3,7 @@
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -20,6 +20,7 @@ from .serializers import (
     PublicationDocumentCreateSerializer,
     PublicationDocumentReviewSerializer,
     PublicationDocumentSerializer,
+    PublicationDocumentUpdateSerializer,
     PublicationSerializer,
     PublicationWithdrawSerializer,
     ShowcaseEntryCreateSerializer,
@@ -207,6 +208,29 @@ class PublicationDocumentReviewView(APIView):
             review=serializer.validated_data.get("review", ""),
         )
         return Response(PublicationDocumentSerializer(document, context={"request": request}).data)
+
+
+class PublicationDocumentUpdateView(APIView):
+    """Aluno edita o conteúdo do documento enquanto estiver pendente."""
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, document_id):
+        document = get_object_or_404(
+            PublicationDocument.objects.select_related("project"), pk=document_id
+        )
+        if document.generated_by_id != request.user.pk:
+            raise PermissionDenied("Somente quem gerou o documento pode editá-lo.")
+        if document.status != PublicationDocument.Status.PENDING:
+            raise ValidationError("Somente documentos pendentes podem ser editados.")
+        serializer = PublicationDocumentUpdateSerializer(
+            document, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            PublicationDocumentSerializer(document, context={"request": request}).data
+        )
 
 
 class PublicationDocumentDownloadView(APIView):

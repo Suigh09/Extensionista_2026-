@@ -603,6 +603,7 @@ class PublicationDocument(models.Model):
         Project, on_delete=models.PROTECT, related_name="publication_documents"
     )
     version = models.PositiveIntegerField()
+    content = models.TextField(blank=True, default="")
     pdf = models.FileField(upload_to=publication_document_path, max_length=300)
     original_name = models.CharField(max_length=255)
     content_type = models.CharField(max_length=120)

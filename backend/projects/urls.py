@@ -31,6 +31,7 @@ from .showcase_views import (
     PublicationDocumentDownloadView,
     PublicationDocumentListCreateView,
     PublicationDocumentReviewView,
+    PublicationDocumentUpdateView,
     PublicationListCreateView,
     PublicationWithdrawView,
     ShowcaseEntryDetailView,
@@ -145,6 +146,11 @@ urlpatterns = [
         "publication-documents/<uuid:document_id>/review/",
         PublicationDocumentReviewView.as_view(),
         name="publication-document-review",
+    ),
+    path(
+        "publication-documents/<uuid:document_id>/content/",
+        PublicationDocumentUpdateView.as_view(),
+        name="publication-document-content",
     ),
     path(
         "publication-documents/<uuid:document_id>/download/",

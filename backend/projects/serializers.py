@@ -780,6 +780,7 @@ class PublicationDocumentSerializer(serializers.ModelSerializer):
             "project",
             "project_name",
             "version",
+            "content",
             "original_name",
             "content_type",
             "size",
@@ -859,6 +860,12 @@ class PublicationDocumentReviewSerializer(serializers.Serializer):
     review = serializers.CharField(
         max_length=2000, allow_blank=True, default="", trim_whitespace=True
     )
+
+
+class PublicationDocumentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicationDocument
+        fields = ["content"]
 
 
 class PublicationSerializer(serializers.ModelSerializer):

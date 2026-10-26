@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react'
-import {cancelShowcaseEntry,createShowcaseEntry,createPublicationDocument,listAcervo,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,recordPresence,reviewPublicationDocument,withdrawPublication,type AcervoItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project} from './api'
+import {cancelShowcaseEntry,createShowcaseEntry,createPublicationDocument,listAcervo,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,recordPresence,reviewPublicationDocument,updatePublicationDocumentContent,withdrawPublication,type AcervoItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project} from './api'
 
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
@@ -234,6 +234,97 @@ export function PublicationDocumentPanel({project,user}:{project:Project;user:Pr
         </details>
       )}
       {uploading&&<p>Enviando PDF…</p>}
+    </section>
+  )
+}
+
+export function PublicationFormPanel({project,user}:{project:Project;user:Profile}){
+  const[documents,setDocuments]=useState<PublicationDocument[]>([])
+  const[message,setMessage]=useState('')
+  const[busy,setBusy]=useState(true)
+  const[content,setContent]=useState('')
+  const[consentGiven,setConsentGiven]=useState(false)
+  const student=user.role==='STUDENT'
+  const isMember=project.groups?.some(group=>group.members.some(member=>member.user_id===user.id))??false
+  const canEdit=student&&isMember
+  const refresh=useCallback(async()=>{
+    setBusy(true)
+    try{setDocuments(await listPublicationDocuments(project.id))}catch(e){setMessage(failure(e))}
+    finally{setBusy(false)}
+  },[project.id])
+  useEffect(()=>{void refresh()},[refresh])
+  const latest=documents[0]
+  const isPending=latest&&latest.status==='PENDING'
+  const isApproved=latest&&latest.status==='APPROVED'
+  const isRejected=latest&&latest.status==='REJECTED'
+  useEffect(()=>{
+    setContent(latest?.content||'')
+    setConsentGiven(latest?.consent_given??false)
+  },[latest])
+  async function saveDraft(){
+    if(!canEdit){setMessage('Você não pode editar este documento.');return}
+    if(!latest){setMessage('Não há documento para editar. Gere um primeiro no painel de documentos.');return}
+    if(!isPending){setMessage('Somente documentos pendentes podem ser editados.');return}
+    setMessage('');setBusy(true)
+    try{
+      await updatePublicationDocumentContent(latest.id,content)
+      saved();setMessage('Rascunho salvo.');await refresh()
+    }catch(e){setBusy(false);setMessage(failure(e))}
+  }
+  async function publish(){
+    if(!latest||!isApproved){setMessage('O documento precisa estar aprovado para publicar.');return}
+    setMessage('');setBusy(true)
+    try{
+      await publishProject({project:project.id,document:latest.id})
+      saved();setMessage('Projeto publicado no acervo.');await refresh()
+    }catch(e){setBusy(false);setMessage(failure(e))}
+  }
+  if(!student)return null
+  const membros=project.groups?.flatMap(g=>g.members.map(m=>m.name)).join(', ')||'—'
+  return (
+    <section className="profile-section" aria-labelledby="form-title">
+      <div className="showcase-header">
+        <div>
+          <span className="eyebrow">Formulário do documento</span>
+          <h2 id="form-title">Elaborar documento do projeto</h2>
+          <p>Preencha o conteúdo. O documento fica editável até o orientador aprovar.</p>
+        </div>
+      </div>
+      {message&&<p role="status" className="alert">{message}</p>}
+      <div className="subheading"><h3>Projeto</h3><p>{project.name}</p></div>
+      <div className="subheading"><h3>Integrantes</h3><p>{membros}</p></div>
+      {latest&&(
+        <div className="subheading">
+          <h3>Status</h3>
+          <span className={`badge ${isApproved?'positive':isRejected?'negative':'neutral'}`}>{documentStatusLabels[latest.status]}</span>
+          {latest.review&&<small> Parecer: {latest.review}</small>}
+        </div>
+      )}
+      {!latest&&(
+        <p>Não há documento gerado para este projeto. Use o painel "Documento publicável" para gerar o primeiro documento.</p>
+      )}
+      {canEdit&&isPending&&latest&&(
+        <form className="project-form" onSubmit={event=>{
+          event.preventDefault();void saveDraft()
+        }}>
+          <label>Conteúdo do documento<textarea name="content" rows={12} value={content} onChange={event=>setContent(event.currentTarget.value)} required/></label>
+          <label><input name="consent" type="checkbox" checked={consentGiven} onChange={event=>setConsentGiven(event.currentTarget.checked)}/> Doy consentimento para uso do meu nome e curso no acervo público.</label>
+          <div className="action-row">
+            <button className="button" type="submit" disabled={busy}>{busy?'Salvando…':'Salvar rascunho'}</button>
+          </div>
+        </form>
+      )}
+      {canEdit&&isApproved&&latest&&(
+        <p>O documento foi aprovado pelo orientador. Não é mais possível editar.</p>
+      )}
+      {canEdit&&isRejected&&latest&&(
+        <p>O documento foi reprovado. Você pode editar o conteúdo e salvar novamente.</p>
+      )}
+      {isApproved&&canEdit&&latest&&(
+        <div className="action-row">
+          <button className="button" onClick={publish} disabled={busy}>{busy?'Publicando…':'Publicar no acervo'}</button>
+        </div>
+      )}
     </section>
   )
 }

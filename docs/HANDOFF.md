@@ -56,6 +56,15 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - Testes atualizados: `test_admin_creates_student_without_storing_plain_cpf`, `test_student_logs_in_with_ra_or_cpf` incluem `course`
 - Turma (`class_offering`) removida do cadastro — não é mais campo obrigatório nem opcional
 
+### Formulário de documento publicável **(IMPLEMENTADA)**
+- Backend: campo `content` (TextField) adicionado ao `PublicationDocument` (`migrations/0016_publicationdocument_content.py`)
+- Backend: `PublicationDocumentUpdateView` (PATCH `/projects/publication-documents/<id>/content/`) permite o aluno editar o conteúdo enquanto o documento está PENDING; bloqueia se já APPROVED/REJECTED ou se não for o autor
+- Backend: `PublicationDocumentSerializer` expõe `content` como editável; `PublicationDocumentUpdateSerializer` para PATCH parcial
+- Frontend: `PublicationFormPanel` — formulário com título do projeto (só leitura), integrantes (só leitura), textarea de conteúdo (editável), checkbox de consentimento, botão "Salvar rascunho" (PATCH) e botão "Publicar no acervo" (se APPROVED)
+- Frontend: `PublicationDocument` tipo inclui `content`; `updatePublicationDocumentContent` no `api.ts`
+- Frontend: rota `#/publication-form/<id>` adicionada; item na sidebar e atalho da home para STUDENT
+- O documento fica editável até o orientador aprovar (status APPROVED), momento em que é travado
+
 ## O que parece funcionar (validado)
 
 - `ruff check backend`: OK
@@ -123,6 +132,15 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `backend/academic/views.py`
 - `frontend/src/App.tsx`
 - `backend/tests/test_accounts.py`
+- `backend/projects/migrations/0016_publicationdocument_content.py`
+- `backend/projects/models.py`
+- `backend/projects/serializers.py`
+- `backend/projects/showcase_views.py`
+- `backend/projects/urls.py`
+- `frontend/src/App.tsx`
+- `frontend/src/api.ts`
+- `frontend/src/showcase.test.tsx`
+- `frontend/src/showcase.tsx`
 - `TASKS.md`
 - `DESAFIOS.md`
 - `docs/HANDOFF.md`
