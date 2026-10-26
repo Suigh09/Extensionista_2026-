@@ -1,5 +1,5 @@
 import pytest
-from academic.models import StudentProfile
+from academic.models import Course, StudentProfile
 from accounts.models import LoginAttempt
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -14,11 +14,16 @@ def create_user(username, role, password="Uma-senha-segura-123"):
     )
 
 
+def create_course():
+    return Course.objects.create(code="ADS", name="Análise de Sistemas")
+
+
 @pytest.mark.django_db
 @pytest.mark.api
 @pytest.mark.security
 def test_admin_creates_student_without_storing_plain_cpf():
     admin = create_user("admin", User.Role.ADMIN)
+    course = create_course()
     client = APIClient()
     client.force_authenticate(admin)
 
@@ -31,6 +36,7 @@ def test_admin_creates_student_without_storing_plain_cpf():
             "role": "STUDENT",
             "ra": "RA1001",
             "cpf": "123.456.789-01",
+            "course": str(course.pk),
         },
         format="json",
     )
@@ -56,6 +62,7 @@ def test_student_cannot_create_users():
 @pytest.mark.api
 def test_student_logs_in_with_ra_or_cpf():
     admin = create_user("admin", User.Role.ADMIN)
+    course = create_course()
     creator = APIClient()
     creator.force_authenticate(admin)
     creator.post(
@@ -67,6 +74,7 @@ def test_student_logs_in_with_ra_or_cpf():
             "role": "STUDENT",
             "ra": "RA2002",
             "cpf": "987.654.321-00",
+            "course": str(course.pk),
         },
         format="json",
     )

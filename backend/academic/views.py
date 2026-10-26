@@ -151,9 +151,10 @@ class EligibleRoomStudentListView(generics.ListAPIView):
     def get_queryset(self):
         require_professor(self.request.user)
         query = self.request.query_params.get("q", "").strip()[:100]
+        course_id = self.request.query_params.get("course", "").strip()
         if len(query) < 2:
             return StudentProfile.objects.none()
-        return (
+        queryset = (
             StudentProfile.objects.filter(user__is_active=True)
             .filter(
                 Q(ra__icontains=query)
@@ -164,6 +165,9 @@ class EligibleRoomStudentListView(generics.ListAPIView):
             .prefetch_related("room_memberships__room__responsible_professor__user")
             .order_by("user__first_name", "user__last_name", "ra")[:10]
         )
+        if course_id:
+            queryset = queryset.filter(course_id=course_id)
+        return queryset
 
 
 class PullRoomStudentView(APIView):

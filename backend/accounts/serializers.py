@@ -1,4 +1,4 @@
-from academic.models import ProfessorProfile, StudentProfile
+from academic.models import Course, ProfessorProfile, StudentProfile
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
@@ -172,6 +172,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
     ra = serializers.CharField(write_only=True, required=False)
     cpf = serializers.CharField(write_only=True, required=False)
     registration = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    course = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.filter(is_active=True),
+        write_only=True,
+        required=False,
+    )
 
     class Meta:
         model = User
@@ -185,13 +190,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "ra",
             "cpf",
             "registration",
+            "course",
         ]
         read_only_fields = ["id"]
 
     def validate(self, attrs):
         role = attrs["role"]
-        if role == User.Role.STUDENT and (not attrs.get("ra") or not attrs.get("cpf")):
-            raise serializers.ValidationError("Aluno exige RA e CPF.")
+        if role == User.Role.STUDENT:
+            if not attrs.get("ra") or not attrs.get("cpf"):
+                raise serializers.ValidationError("Aluno exige RA e CPF.")
+            if not attrs.get("course"):
+                raise serializers.ValidationError("Aluno exige curso.")
         return attrs
 
     @transaction.atomic
@@ -200,6 +209,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ra = validated_data.pop("ra", "")
         cpf = validated_data.pop("cpf", "")
         registration = validated_data.pop("registration", "")
+        course = validated_data.pop("course", None)
         password = validated_data.pop("password")
         user = User(
             **validated_data, first_name=name[0], last_name=name[1] if len(name) > 1 else ""
@@ -213,6 +223,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 ra=ra.strip().upper(),
                 cpf_hash=cpf_fingerprint(digits),
                 cpf_last4=digits[-4:],
+                course=course,
             )
         elif user.role == User.Role.PROFESSOR:
             ProfessorProfile.objects.create(user=user, registration=registration.strip())

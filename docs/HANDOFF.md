@@ -48,6 +48,14 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - Template "Colaboração Interdisciplinar"
 - Convidar mais 3 pessoas após entrar em projeto
 
+### Cadastro de aluno com curso **(IMPLEMENTADA)**
+- `UserCreateSerializer` aceita `course` (obrigatório para STUDENT, queryset ativo); cria `StudentProfile` com `course` preenchido
+- Frontend `UserManagement`: dropdown de cursos (`GET /academic/courses/?is_active=true`) só para role STUDENT; tipo `NewUser` aceita `course?: string`; tipo `AcademicItem` inclui `id`
+- `EligibleRoomStudentListView`: filtro por `?course=<uuid>` para professor pesquisar alunos de um curso específico
+- `pull_student` / `RoomsPage`: professor só puxa alunos para a sala que é responsável (já existente, mantido)
+- Testes atualizados: `test_admin_creates_student_without_storing_plain_cpf`, `test_student_logs_in_with_ra_or_cpf` incluem `course`
+- Turma (`class_offering`) removida do cadastro — não é mais campo obrigatório nem opcional
+
 ## O que parece funcionar (validado)
 
 - `ruff check backend`: OK
@@ -67,7 +75,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `backend/projects/showcase_views.py`: 8 views da Sprint 7 (com correção de bugs críticos no diff anterior)
 - `backend/projects/serializers.py`: serializers dos modelos da Sprint 7
 - `backend/projects/urls.py`: URLs da Sprint 7 + endpoint `/acervo-publico/`
-- `backend/accounts/models.py`: novos `Notification.Kind` (DOCUMENT_PENDING, DOCUMENT_APPROVED, DOCUMENT_REJECTED, PUBLICATION_CREATED, PUBLICATION_WITHDRAWN)
+- `backend/accounts/models.py`: novos `Notification.Kind` (DOCUMENT_PENDING, DOCUMENT_APPROVED, DOCUMENT_REJECTED, PUBLICATION_CREATED, PUBLICATION_WITHDRAWN, PROJECT_MEMBER_ADDED)
 - `backend/tests/test_showcase.py`: 15 testes da Sprint 7 + 1 novo teste (`test_acervo_publico_permite_acesso_anonimo`)
 - Migrations: `projects/0013`, `projects/0014`, `projects/0015`, `accounts/0005`
 
@@ -111,6 +119,10 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `backend/tests/test_lifecycle.py`
 - `frontend/src/api.ts`
 - `frontend/src/projectLifecycle.tsx`
+- `backend/accounts/serializers.py`
+- `backend/academic/views.py`
+- `frontend/src/App.tsx`
+- `backend/tests/test_accounts.py`
 - `TASKS.md`
 - `DESAFIOS.md`
 - `docs/HANDOFF.md`

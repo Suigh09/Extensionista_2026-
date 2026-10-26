@@ -1,12 +1,12 @@
 export type Role='STUDENT'|'PROFESSOR'|'SECRETARIAT'|'ADMIN'
-export type AcademicItem={code:string;name:string}
+export type AcademicItem={id:string;code:string;name:string}
 export type ClassOfferingOption={id:string;label:string;subject_name?:string;offering_code?:string;term?:string;student_count?:number}
 export type EnrollmentSummary={id:string;subject_code:string;subject_name:string;offering_code:string;term:string;professors:string[]}
 export type ProfileProject={id:string;name:string;status:ProjectStatus;advisor?:string|null;evaluator?:string|null;members?:string[]}
 export type RoomSummary={id:string;name:string;academic_identifier?:string;status:'ACTIVE'|'CLOSED';professor_name?:string;student_count?:number}
 export type Expertise={id:string;kind:'DISCIPLINE'|'COMPETENCY';text:string;normalized_text?:string}
 export type Profile={id:string;username:string;name:string;email:string;role:Role;profile:null|{ra?:string;cpf?:string;registration?:string;course?:AcademicItem|null;courses?:AcademicItem[];subjects?:AcademicItem[];current_term?:string|null;class_offering?:string|null;class_offering_label?:string|null;class_offerings?:ClassOfferingOption[];enrollments?:EnrollmentSummary[];projects?:ProfileProject[];advising_projects?:ProfileProject[];evaluating_projects?:ProfileProject[];active_room?:RoomSummary|null;expertise?:Expertise[]}}
-export type NewUser={username:string;password:string;name:string;email?:string;role:Role;ra?:string;cpf?:string;registration?:string}
+export type NewUser={username:string;password:string;name:string;email?:string;role:Role;ra?:string;cpf?:string;registration?:string;course?:string}
 export type Member={user_id:string;student_id:number;name:string;ra:string;joined_at:string}
 export type ProjectGroup={id:string;name:string;class_offering:string;member_count:number;formation_status:'FORMING'|'FORMED'|'COMPLETE';members:Member[];responsible_professor_name:string|null;evaluator_name:string|null;leader?:number|null;leader_user_id?:string|null}
 export type ProjectStatus='DRAFT'|'PENDING_APPROVAL'|'CHANGES_REQUESTED'|'APPROVED'|'COMPLETED'|'ARCHIVED'|'PAUSED'|'CANCELLED'
@@ -34,6 +34,7 @@ export const getSession=()=>request<Profile>('/auth/session/')
 export async function login(identifier:string,password:string){const profile=await request<Profile>('/auth/login/',{method:'POST',body:JSON.stringify({identifier,password})});token='';return profile}
 export async function logout(){await request<void>('/auth/logout/',{method:'POST'});token=''}
 export const listUsers=()=>request<Profile[]>('/auth/users/')
+export const listCourses=()=>request<AcademicItem[]>('/academic/courses/?is_active=true')
 export const createUser=(user:NewUser)=>request<Profile>('/auth/users/',{method:'POST',body:JSON.stringify(user)})
 export const listProjects=(query='')=>request<Project[]>(`/projects/?q=${encodeURIComponent(query)}`)
 export const getProject=(projectId:string)=>request<Project>(`/projects/${projectId}/`)
