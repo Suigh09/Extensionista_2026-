@@ -35,6 +35,7 @@
 
 - Empurrar os commits para `origin/main` (feito na sessão atual)
 - Execução dos testes E2E Playwright no CI (requer backend rodando e E2E_TEST_PASSWORD)
+- Migrações 0017/0018 commitadas (templates de projeto); 0019 descartada (duplicata perigosa)
 - Tela pública anônima do acervo no frontend (FEITA — acesso via #/acervo-publico sem login)
 
 ## Concluídas nesta sessão (melhorias de UI/Sprint 7)
@@ -101,6 +102,6 @@
 
 - Bug pré-existente: `App > cria o projeto antes de formar o grupo` falha no frontend — verificado falhar também no HEAD sem alterações (stash).
 - Cobertura backend: 92% (mínimo 85%).
-- Branch: `main`, sincronizada com `origin/main` (último commit `28e3521`)
-- Último commit: `28e3521` feat: acervo público anônimo sem login
+- Branch: `main`, sincronizada com `origin/main` (último commit `1b45ad3`)
+- Último commit: `1b45ad3` feat: migrations para templates de projeto
 - Ver `DESAFIOS.md` antes de retomar (PowerShell, como rodar pytest local, bugs já corrigidos).

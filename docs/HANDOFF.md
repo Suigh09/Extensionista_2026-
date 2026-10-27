@@ -164,7 +164,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Branch e commits recentes
 
 - Branch: `main`, sincronizada com `origin/main`
-- Último commit: `28e3521` feat: acervo público anônimo sem login
+- Último commit: `1b45ad3` feat: migrations para templates de projeto
 
 ## Próximas ações
 
