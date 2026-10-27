@@ -167,7 +167,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Branch e commits recentes
 
 - Branch: `main`, sincronizada com `origin/main`
-- Último commit: `0245503` feat: implementar 3 ideias do backlog da Sprint 7
+- Último commit: `ae1209f` feat: remover atalho duplicado 'Acervo publicado' da home
 
 ## Próximas ações
 
