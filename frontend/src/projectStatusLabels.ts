@@ -1,0 +1,1 @@
+export const statusLabels:Record<string,string>={DRAFT:'Rascunho',PENDING_APPROVAL:'Aguardando aprovação',CHANGES_REQUESTED:'Ajustes solicitados',APPROVED:'Aprovado',PAUSED:'Pausado',CANCELLED:'Cancelado',COMPLETED:'Concluído',ARCHIVED:'Arquivado'}

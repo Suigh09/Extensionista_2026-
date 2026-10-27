@@ -1,13 +1,13 @@
-import {useEffect,useState,type FormEvent} from 'react'
+import {useCallback,useEffect,useState,type FormEvent} from 'react'
 import {designateEvaluator,recommendEvaluators,searchProfessors,type EvaluationGroup,type RecommendationResponse,type SearchedProfessor} from './api'
 
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
 
-export function EvaluatorDesignation({projectId}:{projectId:string}){
+export function EvaluatorDesignation({projectId}:{projectId:string}) {
   const[data,setData]=useState<RecommendationResponse|null>(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[unavailable,setUnavailable]=useState(false)
   const[selected,setSelected]=useState<{group:EvaluationGroup;professor:{id:string;name:string;matched:Record<string,string[]>;match_count:number}}|null>(null)
-  async function refresh(){
+  const refresh=useCallback(async()=>{
     setBusy(true)
     try{
       setData(await recommendEvaluators(projectId))
@@ -17,8 +17,8 @@ export function EvaluatorDesignation({projectId}:{projectId:string}){
       if(detail.includes('encaminhado'))setUnavailable(true)
       else setMessage(detail)
     }finally{setBusy(false)}
-  }
-  useEffect(()=>{void refresh()},[projectId])
+  },[projectId])
+  useEffect(()=>{void refresh()},[refresh])
   async function confirm(event:FormEvent<HTMLFormElement>,group:EvaluationGroup,professorId:string){
     event.preventDefault();const reason=String(new FormData(event.currentTarget).get('justification')||'')
     setMessage('')

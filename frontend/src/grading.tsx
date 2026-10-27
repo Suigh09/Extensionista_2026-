@@ -1,4 +1,4 @@
-import {useEffect,useState,type FormEvent} from 'react'
+import {useCallback,useEffect,useRef,useState,type FormEvent} from 'react'
 import {addCriterion,concludeEvaluation,createRubric,deleteCriterion,deleteRubric,gradeIndividual,groupGrades,individualGrades,listRubrics,submitGrades,updateRubricTitle,usableRubrics,type GradeSubmission,type IndividualGrade,type Project,type ProjectGroup,type Rubric} from './api'
 
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
@@ -35,17 +35,19 @@ export function RubricManagement(){
 }
 
 export function GroupEvaluationPanel({project,group}:{project:Project;group:ProjectGroup}){
+  const rubricIdRef = useRef<string|null>(null)
   const[rubrics,setRubrics]=useState<Rubric[]>([]),[rubricId,setRubricId]=useState(''),[average,setAverage]=useState<string|null>(null),[submissions,setSubmissions]=useState<GradeSubmission[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[concluded,setConcluded]=useState(false)
-  async function refresh(){
+  const refresh=useCallback(async()=>{
     setBusy(true)
     try{
       const[available,grades]=await Promise.all([usableRubrics(project.id),groupGrades(group.id)])
       setRubrics(available);setAverage(grades.average);setSubmissions(grades.submissions)
       setConcluded(grades.submissions.length>0&&grades.submissions[grades.submissions.length-1].concluded)
-      if(!rubricId&&available.length>0)setRubricId(available[0].id)
+      if(!rubricIdRef.current&&available.length>0)setRubricId(available[0].id)
     }catch(e){setMessage(failure(e))}finally{setBusy(false)}
-  }
-  useEffect(()=>{void refresh()},[project.id,group.id])
+  },[project.id,group.id])
+  useEffect(()=>{void refresh()},[refresh])
+  useEffect(()=>{rubricIdRef.current = rubricId},[rubricId])
   const selected=rubrics.find(item=>item.id===rubricId)
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const data=new FormData(event.currentTarget)
