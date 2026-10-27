@@ -164,7 +164,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Branch e commits recentes
 
 - Branch: `main`, sincronizada com `origin/main`
-- Último commit: `1b45ad3` feat: migrations para templates de projeto
+- Último commit: `7ec8d09` docs: registrar limitação dos testes E2E no DESAFIOS.md
 
 ## Próximas ações
 
