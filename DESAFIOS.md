@@ -33,6 +33,17 @@ Problemas recorrentes e aprendizados para não repetir. Atualizar ao final de ca
 - `App.test.tsx > "cria o projeto antes de formar o grupo"` falha no HEAD limpo (verificado com `git stash`). Não relacionada às mudanças recentes. Não investigada.
 - Atenção: `npm run lint` tem 3 warnings pré-existentes (exhaustive-deps em `evaluation.tsx`/`grading.tsx`, react-refresh em `projectLifecycle.tsx`) — não são erros.
 
+## Testes E2E Playwright (bloqueado por infraestrutura)
+
+- Os testes E2E (`frontend/e2e/showcase.spec.ts`, GF-09/GF-10) exigem:
+  - Docker Desktop com daemon acessível (na máquina atual não está disponível: `docker compose` falha com "failed to connect to the docker API")
+  - Backend rodando na porta 8000 (`docker compose up -d db backend`)
+  - Usuários de teste cadastrados no banco (`RA3001`, `RA3002`, `prof.teste1`, `secretaria.teste`)
+  - Variável `E2E_TEST_PASSWORD` definida
+  - Browsers do Playwright instalados (`npx playwright install`)
+- Sem o backend rodando, os testes são pulados automaticamente (`test.skip(true, 'backend de desenvolvimento indisponível')`).
+- Quando o Docker estiver disponível: subir `docker compose up -d db backend`, criar usuários de teste, definir `E2E_TEST_PASSWORD`, rodar `npx playwright install` e `npx playwright test`.
+
 ## Navegação do Acervo
 
 - Rotas `#/archive` (Acervo) e `#/acervo` (Acervo publicado) **ambas renderizam `AcervoPanel`**. O item duplicado foi removido só da sidebar; os atalhos da home ainda têm os dois (`shortcuts` em `App.tsx`) — mantidos porque o E2E `showcase.spec.ts:183` clica no botão `Acervo publicado`.
