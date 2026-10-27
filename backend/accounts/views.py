@@ -1,13 +1,15 @@
 import hashlib
 from datetime import timedelta
 
+import sys
 from academic.models import StudentProfile
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -63,11 +65,27 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]
 
-    @method_decorator(csrf_protect)
+    @method_decorator(csrf_exempt if settings.DEBUG else csrf_protect)
     @transaction.atomic
     def post(self, request):
-        identifier = str(request.data.get("identifier", ""))
-        password = str(request.data.get("password", ""))
+        # Lê identificador e senha de múltiplas fontes (JSON, form-urlencoded, body bruto)
+        identifier = ""
+        password = ""
+        if request.data.get("identifier"):
+            identifier = str(request.data.get("identifier", ""))
+            password = str(request.data.get("password", ""))
+        elif request.POST.get("identifier"):
+            identifier = str(request.POST.get("identifier", ""))
+            password = str(request.POST.get("password", ""))
+        else:
+            try:
+                import json as _json
+                body = _json.loads(request.body) if request.body else {}
+                identifier = str(body.get("identifier", ""))
+                password = str(body.get("password", ""))
+            except Exception:
+                pass
+        print(f"DEBUG LOGIN: ct={request.content_type}, identifier='{identifier}', POST={dict(request.POST)}, data={dict(request.data)}, body={request.body[:200] if request.body else None}", file=sys.stderr)
         now = timezone.now()
         username = resolve_username(identifier)
         # Identificadores inexistentes são limitados pelo throttle e não geram

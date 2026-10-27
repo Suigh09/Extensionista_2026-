@@ -133,7 +133,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "EXCEPTION_HANDLER": "core.exceptions.safe_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "DEFAULT_THROTTLE_RATES": {"login": "20/minute"},
+    "DEFAULT_THROTTLE_RATES": {"login": "200/minute" if os.getenv("DJANGO_ENV") == "development" else "20/minute"},
     "PAGE_SIZE": 25,
 }
 LOGGING = {
