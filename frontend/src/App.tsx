@@ -43,7 +43,11 @@ export default function App(){
   async function onLogin(event:FormEvent<HTMLFormElement>){event.preventDefault();setError('');const data=new FormData(event.currentTarget);try{setUser(await login(String(data.get('identifier')),String(data.get('password'))))}catch(reason){setError(reason instanceof Error?reason.message:'Falha no acesso')}}
   async function onLogout(){await logout();setUser(null)}
   if(loading)return <main id="conteudo" tabIndex={-1} className="center" aria-live="polite">Carregando sessão…</main>
-  if(!user)return <LoginForm onSubmit={onLogin} error={error}/>
+  if(!user){
+    const hashPage=window.location.hash.replace('#/','')
+    if(hashPage==='acervo-publico')return <PublicAcervoPanel/>
+    return <LoginForm onSubmit={onLogin} error={error}/>
+  }
   return <Dashboard user={user} onLogout={onLogout}/>
 }
 
