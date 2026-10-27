@@ -102,7 +102,7 @@ def create_from_theme(*, actor, theme_id, name, about, leader_id=None, student_i
         raise ValidationError("O aluno precisa pertencer à sala ativa deste tema.")
     if not student.class_offering_id or not student.course_id:
         raise ValidationError("O aluno precisa de curso e turma cadastrados.")
-    if current_membership(student):
+    if not theme.interdisciplinary and current_membership(student):
         raise ValidationError(
             {
                 "code": "ACTIVE_PROJECT_CONFLICT",

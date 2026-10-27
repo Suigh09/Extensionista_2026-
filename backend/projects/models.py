@@ -113,6 +113,7 @@ class ProjectTheme(models.Model):
     is_open = models.BooleanField(default=True)
     max_projects = models.PositiveIntegerField(null=True, blank=True)
     is_template = models.BooleanField(default=False)
+    interdisciplinary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -229,7 +230,11 @@ class CollaborationOpportunity(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     group = models.ForeignKey(
-        ProjectGroup, on_delete=models.PROTECT, related_name="collaboration_opportunities"
+        ProjectGroup,
+        on_delete=models.PROTECT,
+        related_name="collaboration_opportunities",
+        null=True,
+        blank=True,
     )
     title = models.CharField(max_length=160)
     description = models.TextField(max_length=2000)

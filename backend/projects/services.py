@@ -231,14 +231,19 @@ def _require_formed_group(group):
 
 @transaction.atomic
 def create_collaboration_opportunity(*, actor, group, title, description, desired_skills):
-    locked_group = (
-        ProjectGroup.objects.select_for_update().select_related("project").get(pk=group.pk)
-    )
-    require_approved_project(locked_group.project)
-    creator = require_member(actor, locked_group)
-    _require_formed_group(locked_group)
-    if locked_group.project.groups.filter(is_active=True).count() >= 2:
-        raise ValidationError("Este projeto já possui dois grupos.")
+    if group is not None:
+        locked_group = (
+            ProjectGroup.objects.select_for_update().select_related("project").get(pk=group.pk)
+        )
+        require_approved_project(locked_group.project)
+        creator = require_member(actor, locked_group)
+        _require_formed_group(locked_group)
+        if locked_group.project.groups.filter(is_active=True).count() >= 2:
+            raise ValidationError("Este projeto já possui dois grupos.")
+    else:
+        # Oportunidade individual (sem grupo atribuído) — qualquer aluno ativo pode criar
+        creator = require_student(actor)
+        locked_group = None
     try:
         opportunity = CollaborationOpportunity.objects.create(
             group=locked_group,
@@ -274,17 +279,18 @@ def create_collaboration_application(*, actor, opportunity, candidate_group, mes
     _require_formed_group(candidate)
     if locked.status != CollaborationOpportunity.Status.OPEN:
         raise ValidationError("Esta oportunidade não está aberta.")
-    if candidate.pk == locked.group_id or candidate.project_id == locked.group.project_id:
+    if candidate.project_id == locked.group.project_id and locked.group is not None:
         raise ValidationError("O próprio projeto não pode se candidatar.")
     if candidate.project.groups.filter(is_active=True).count() != 1:
         raise ValidationError("Somente projetos com um grupo podem se candidatar.")
-    if locked.group.project.groups.filter(is_active=True).count() >= 2:
+    if locked.group is not None and locked.group.project.groups.filter(is_active=True).count() >= 2:
         raise ValidationError("O projeto anunciante já possui dois grupos.")
-    publisher_members = set(
-        locked.group.members.filter(is_active=True).values_list("student_id", flat=True)
-    )
-    if candidate.members.filter(is_active=True, student_id__in=publisher_members).exists():
-        raise ValidationError("Os grupos da parceria não podem compartilhar integrantes.")
+    if locked.group is not None:
+        publisher_members = set(
+            locked.group.members.filter(is_active=True).values_list("student_id", flat=True)
+        )
+        if candidate.members.filter(is_active=True, student_id__in=publisher_members).exists():
+            raise ValidationError("Os grupos da parceria não podem compartilhar integrantes.")
     try:
         application = CollaborationApplication.objects.create(
             opportunity=locked, candidate_group=candidate, message=message, created_by=creator

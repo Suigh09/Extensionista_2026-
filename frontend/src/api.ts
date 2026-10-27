@@ -18,7 +18,7 @@ export type FollowUp={id:string;project:string;author_name:string;author_role:Ro
 export type Milestone={id:string;title:string;description:string;due_at:string;scope?:'PROJECTS'|'CLASS';requires_delivery:boolean;requires_approval:boolean;created_by_name:string;created_at?:string;assigned_at?:string;project_count?:number}
 export type TimelineItem={id:string;event_type:'FOLLOW_UP';occurred_at:string;title:string;description:string;author_role:Role;attachments:Attachment[]}
 export type CollaborationApplication={id:string;opportunity:string;candidate_group:string;candidate_group_name:string;candidate_project_name:string;candidate_class_label:string;candidate_member_count:number;message:string;status:'PENDING'|'ACCEPTED'|'DECLINED'|'CANCELLED';created_at:string;decided_at:string|null;is_mine:boolean}
-export type CollaborationOpportunity={id:string;group:string;project_id:string;project_name:string;group_name:string;class_label:string;member_count:number;title:string;description:string;desired_skills:string[];status:'OPEN'|'MATCHED'|'CLOSED';created_at:string;updated_at:string;is_owner:boolean;applications:CollaborationApplication[]}
+export type CollaborationOpportunity={id:string;group:string|null;project_id:string|null;project_name:string|null;group_name:string|null;class_label:string|null;member_count:number;title:string;description:string;desired_skills:string[];status:'OPEN'|'MATCHED'|'CLOSED';created_at:string;updated_at:string;is_owner:boolean;applications:CollaborationApplication[]}
 export type RoomStudent={id:string;name:string;ra:string;course_name?:string;active_room?:RoomSummary|null}
 export type AcademicRoom=RoomSummary&{created_at?:string;closed_at?:string|null;students?:RoomStudent[];professor_name?:string}
 export type PullStudentResult={action:'ADDED'|'TRANSFER_REQUESTED';detail?:string;transfer_request?:RoomTransferRequest}
@@ -57,7 +57,7 @@ export const listProfessorProjects=()=>request<Project[]>('/projects/available-t
 export const listMilestones=()=>request<Milestone[]>('/projects/milestones/')
 export const createMilestone=(data:{title:string;description:string;due_at:string;scope:'PROJECTS'|'CLASS';requires_delivery:boolean;requires_approval:boolean;class_offering?:string;project_ids?:string[]})=>request<Milestone>('/projects/milestones/',{method:'POST',body:JSON.stringify(data)})
 export const listCollaborationOpportunities=(query='')=>request<CollaborationOpportunity[]>(`/projects/collaborations/opportunities/?q=${encodeURIComponent(query)}`)
-export const createCollaborationOpportunity=(data:{group:string;title:string;description:string;desired_skills:string[]})=>request<CollaborationOpportunity>('/projects/collaborations/opportunities/',{method:'POST',body:JSON.stringify(data)})
+export const createCollaborationOpportunity=(data:{group?:string|null;title:string;description:string;desired_skills:string[]})=>request<CollaborationOpportunity>('/projects/collaborations/opportunities/',{method:'POST',body:JSON.stringify(data)})
 export const applyToCollaboration=(opportunityId:string,data:{candidate_group:string;message:string})=>request<CollaborationApplication>(`/projects/collaborations/opportunities/${opportunityId}/applications/`,{method:'POST',body:JSON.stringify(data)})
 export const decideCollaboration=(applicationId:string,decision:'accept'|'decline'|'cancel')=>request<CollaborationApplication>(`/projects/collaborations/applications/${applicationId}/${decision}/`,{method:'POST',body:'{}'})
 export const listRooms=()=>request<AcademicRoom[]>('/academic/rooms/')
@@ -74,7 +74,7 @@ export const deleteExpertise=(id:string)=>request<void>(`/academic/my-expertise/
 export const listRoomTransferRequests=()=>request<RoomTransferRequest[]>('/academic/room-transfer-requests/')
 export const decideRoomTransfer=(id:string,decision:'approve'|'decline',decision_note='')=>request<RoomTransferRequest>(`/academic/room-transfer-requests/${id}/${decision}/`,{method:'POST',body:JSON.stringify({decision_note})})
 
-export type ProjectTheme={id:string;room:string;room_name:string;title:string;description:string;is_open:boolean;max_projects:number|null;project_count:number}
+export type ProjectTheme={id:string;room:string;room_name:string;title:string;description:string;is_open:boolean;max_projects:number|null;project_count:number;is_template:boolean;interdisciplinary:boolean}
 export const listThemes=(is_template='')=>request<ProjectTheme[]>(`/projects/themes/?is_template=${encodeURIComponent(is_template)}`)
 export const saveTheme=(data:{room:string;title:string;description:string;max_projects:number|null})=>request<ProjectTheme>('/projects/themes/',{method:'POST',body:JSON.stringify(data)})
 export const updateTheme=(id:string,data:Partial<Pick<ProjectTheme,'title'|'description'|'is_open'|'max_projects'>>)=>request<ProjectTheme>(`/projects/themes/${id}/`,{method:'PATCH',body:JSON.stringify(data)})

@@ -28,6 +28,8 @@ class ThemeSerializer(serializers.ModelSerializer):
             "description",
             "is_open",
             "max_projects",
+            "is_template",
+            "interdisciplinary",
             "project_count",
         ]
         read_only_fields = ["id", "room_name", "project_count"]
@@ -60,6 +62,9 @@ class ThemeListView(APIView):
             is_template = request.query_params.get("is_template", "").strip().lower()
             if is_template == "true":
                 themes = themes.filter(is_template=True)
+            interdisciplinary = request.query_params.get("interdisciplinary", "").strip().lower()
+            if interdisciplinary == "true":
+                themes = themes.filter(interdisciplinary=True)
         elif not is_admin(request.user):
             themes = themes.filter(room__responsible_professor__user=request.user)
         for word in request.query_params.get("q", "")[:100].split():
