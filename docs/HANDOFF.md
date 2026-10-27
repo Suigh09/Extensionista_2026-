@@ -12,17 +12,27 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `Publication`: publicação no acervo (GF-09) e bloqueio de publicação inválida (GF-10), retirada pela secretaria com histórico preservado (sem republicação)
 - Notificações: documento aprovado/reprovado, publicação criada, publicação retirada
 - Auditoria: agenda, presença, gerações, aprovações, publicações, retiradas
+- Notificações deletáveis + marcação automática como lida ao clicar (frontend)
+- Cadastro de aluno com curso obrigatório (frontend + backend)
+- Formulário de documento publicável editável até aprovação do orientador (frontend + backend)
+- Acervo público anônimo no frontend (GET /acervo-publico/)
+- Download público do PDF do documento
+- Select de documentos aprovados no painel de publicação
+- Tela de avaliações (#/evaluations) substituindo FutureModule
+- Tela de designar avaliador (#/evaluator-designation/<id>) integrada na sidebar
+- Páginas independentes de avaliação de grupo (#/group-evaluation/<id>) e notas individuais (#/individual-grades)
 
 ## O que parece funcionar
 
 - `ruff check backend`: OK
 - `python manage.py check`: OK
 - `makemigrations --check --dry-run`: OK (sem mudanças pendentes)
-- pytest backend: 82 passed, 1 falha pré-existente (`App > cria o projeto antes de formar o grupo`)
-- Coverage backend: 92% (mínimo 85%)
+- pytest backend: **82 passed**, coverage **92%** (mínimo 85%)
 - `npm run lint` frontend: OK (0 erros, 3 warnings pré-existentes)
-- `npm run build` frontend: OK (após correção do fixture `showcase.test.tsx`)
-- `npm test` frontend: 49/50 tests passing (1 falha pré-existente `App > cria o projeto antes de formar o grupo`)
+- `npm run build` frontend: OK
+- `npm test` frontend: **50/50** (todos passando, incluindo falha pré-existente corrigida)
+
+## Trabalho feito nesta sessão
 
 ## Trabalho feito nesta sessão
 
@@ -101,7 +111,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - pytest backend: **82 passed**, coverage **92%**
 - `npm run lint`: 0 erros, 3 warnings pré-existentes
 - `npm run build`: OK
-- `npm test` frontend: **49/50** (1 falha pré-existente confirmada no HEAD limpo)
+- `npm test` frontend: **50/50** (todos passando, incluindo falha pré-existente corrigida)
 - `npm run build` frontend: OK
 
 ## Trabalho feito
@@ -154,10 +164,11 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Branch e commits recentes
 
 - Branch: `main`, **10 commits à frente de `origin/main`** (não empurrados)
-- Último commit: `2a0d61a` feat: formulário de documento publicável com conteúdo editável até aprovação do orientador
+- Último commit: `9321ab6` feat: corrigir login deletável e warnings de lint
 
 ## Próximas ações
 
 1. **Commit** das mudanças do acervo e avaliação frontend
 2. Executar testes E2E Playwright no CI (GF-09/GF-10)
 3. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
+4. Resolver erro 500 no login do Playwright (possível problema de CSRF/CSRF token entre frontend Vite na porta 5173 e backend Django na porta 8000)
