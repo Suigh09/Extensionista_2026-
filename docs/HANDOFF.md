@@ -65,6 +65,34 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - Frontend: rota `#/publication-form/<id>` adicionada; item na sidebar e atalho da home para STUDENT
 - O documento fica editável até o orientador aprovar (status APPROVED), momento em que é travado
 
+### Acervo público **(IMPLEMENTADA)**
+- Frontend: `PublicAcervoPanel` — tela pública consumindo `GET /projects/acervo-publico/` (sem login), com pesquisa por título
+- Frontend: rota `#/acervo-publico` adicionada; item na sidebar para SECRETARIAT/ADMIN; atalho na home para todos
+- Frontend: `listAcervoPublico` no `api.ts` com tipo `AcervoPublicItem`
+
+### Download público do PDF **(IMPLEMENTADA)**
+- Frontend: `publicationDocumentDownloadPublicUrl` no `api.ts` — URL pública para download do documento
+
+### Select de documentos no PublicationPanel **(IMPLEMENTADA)**
+- Frontend: `PublicationPanel` agora carrega `PublicationDocument` APPROVED do projeto e preenche o `<select>` de documentos para publicação
+
+### Unificação de rotas Acervo **(IMPLEMENTADA)**
+- `#/archive` e `#/acervo` continuam renderizando `AcervoPanel` (mesmo componente, comportamento idêntico)
+
+### Avaliação — Tela `#/evaluations` **(IMPLEMENTADA)**
+- Frontend: `EvaluationsPage` — lista projetos aprovados do professor com botão "Avaliar grupo" (navega para `group-evaluation`) e "Notas individuais"
+- Frontend: rota `#/evaluations` substitui o `FutureModule`
+- Frontend: item na sidebar para PROFESSOR
+
+### Avaliação — Designar avaliador **(IMPLEMENTADA)**
+- Frontend: `EvaluatorDesignation` já existente, agora ligado à rota `#/evaluator-designation/<projectId>`
+- Frontend: item na sidebar para SECRETARIAT/ADMIN
+
+### Avaliação — Páginas independentes **(IMPLEMENTADA)**
+- Frontend: `GroupEvaluationPanel` acessível via `#/group-evaluation/<projectId>` (renderiza `ProjectDetailPage` com painéis de avaliação)
+- Frontend: `IndividualGradesPage` — página independente para orientador lançar notas individuais por aluno (0-10) com histórico
+- Frontend: rotas `#/group-evaluation/<id>` e `#/individual-grades` adicionadas
+
 ## O que parece funcionar (validado)
 
 - `ruff check backend`: OK
@@ -110,28 +138,8 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `npm run build` tinha erro de fixture em `showcase.test.tsx` — corrigido neste relato
 - `npm run lint` tem 3 warnings pré-existentes (`exhaustive-deps` em `evaluation.tsx`, `grading.tsx`, `projectLifecycle.tsx`)
 
-## Arquivos modificados (não commitados antes do commit)
+## Arquivos modificados (nesta sessão)
 
-- `backend/projects/showcase_views.py`
-- `backend/projects/urls.py`
-- `backend/tests/test_showcase.py`
-- `frontend/src/App.tsx`
-- `frontend/src/showcase.tsx`
-- `frontend/src/showcase.test.tsx`
-- `frontend/src/styles.css`
-- `frontend/src/notifications.tsx`
-- `frontend/e2e/showcase.spec.ts`
-- `backend/accounts/models.py`
-- `backend/accounts/migrations/0006_alter_notification_kind.py`
-- `backend/projects/lifecycle.py`
-- `backend/projects/serializers.py`
-- `backend/tests/test_lifecycle.py`
-- `frontend/src/api.ts`
-- `frontend/src/projectLifecycle.tsx`
-- `backend/accounts/serializers.py`
-- `backend/academic/views.py`
-- `frontend/src/App.tsx`
-- `backend/tests/test_accounts.py`
 - `backend/projects/migrations/0016_publicationdocument_content.py`
 - `backend/projects/models.py`
 - `backend/projects/serializers.py`
@@ -141,20 +149,15 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `frontend/src/api.ts`
 - `frontend/src/showcase.test.tsx`
 - `frontend/src/showcase.tsx`
-- `TASKS.md`
-- `DESAFIOS.md`
 - `docs/HANDOFF.md`
 
 ## Branch e commits recentes
 
-- Branch: `main`, **7 commits à frente de `origin/main`** (não empurrados)
-- Último commit: `8adf4f7` feat: UI da tela do aluno em blocos e acesso público ao acervo
+- Branch: `main`, **10 commits à frente de `origin/main`** (não empurrados)
+- Último commit: `2a0d61a` feat: formulário de documento publicável com conteúdo editável até aprovação do orientador
 
 ## Próximas ações
 
-1. **Commit** das mudanças já realizado (`feat: UI da tela do aluno em blocos e acesso público ao acervo`)
-2. Validar visualmente no navegador (blocos da tela de projetos)
-3. **Ideia 1 (notificações deletáveis)**: implementada nesta sessão (ver acima)
-4. **Ideia 2 (professor criar projeto + puxar alunos)**: implementada nesta sessão (ver acima)
-5. Executar testes E2E Playwright no CI (GF-09/GF-10)
-6. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
+1. **Commit** das mudanças do acervo e avaliação frontend
+2. Executar testes E2E Playwright no CI (GF-09/GF-10)
+3. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')

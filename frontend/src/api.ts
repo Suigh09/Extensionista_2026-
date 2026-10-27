@@ -152,4 +152,7 @@ export const publishProject=(data:PublicationCreate)=>request<Publication>('/pro
 export const withdrawPublication=(publicationId:string,reason='')=>request<Publication>(`/projects/publications/${publicationId}/withdraw/`,{method:'POST',body:JSON.stringify({reason})})
 
 export type AcervoItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string}
+export type AcervoPublicItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string}
 export const listAcervo=(q='')=>request<AcervoItem[]>(`/projects/acervo/?q=${encodeURIComponent(q)}`)
+export const listAcervoPublico=(q='')=>request<AcervoPublicItem[]>(`/projects/acervo-publico/?q=${encodeURIComponent(q)}`,{credentials:'omit'})
+export const publicationDocumentDownloadPublicUrl=(documentId:string)=>`${API}/projects/publication-documents/${documentId}/download/`

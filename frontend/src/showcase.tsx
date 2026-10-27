@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react'
-import {cancelShowcaseEntry,createShowcaseEntry,createPublicationDocument,listAcervo,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,recordPresence,reviewPublicationDocument,updatePublicationDocumentContent,withdrawPublication,type AcervoItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project} from './api'
+import {cancelShowcaseEntry,createShowcaseEntry,createPublicationDocument,listAcervo,listAcervoPublico,listProfessorProjects,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,recordPresence,reviewPublicationDocument,updatePublicationDocumentContent,withdrawPublication,individualGrades,gradeIndividual,type AcervoItem,type AcervoPublicItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project,type IndividualGrade} from './api'
 
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
@@ -334,14 +334,20 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
   const[message,setMessage]=useState('')
   const[busy,setBusy]=useState(true)
   const[publishing,setPublishing]=useState<{project:string;document:string}|null>(null)
+  const[approvedDocs,setApprovedDocs]=useState<PublicationDocument[]>([])
   const student=user.role==='STUDENT'
   const secretariat=user.role==='SECRETARIAT'||user.role==='ADMIN'
   const isMember=project.groups?.some(group=>group.members.some(member=>member.user_id===user.id))??false
   const refresh=useCallback(async()=>{
     setBusy(true)
-    try{setPublications(await listPublications())}catch(e){setMessage(failure(e))}
+    try{
+      await Promise.all([
+        listPublications().then(setPublications),
+        listPublicationDocuments(project.id).then(docs=>setApprovedDocs(docs.filter(d=>d.status==='APPROVED')))
+      ])
+    }catch(e){setMessage(failure(e))}
     finally{setBusy(false)}
-  },[])
+  },[project.id])
   useEffect(()=>{void refresh()},[refresh])
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const form=event.currentTarget;const data=new FormData(form)
@@ -403,7 +409,7 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
           <summary>Publicar no acervo</summary>
           <p>O projeto precisa ter sido apresentado na Mostra e o documento aprovado pelo orientador.</p>
           <form onSubmit={submit}>
-            <label>Documento publicável<select name="document" required><option value="">Selecione um documento aprovado</option></select></label>
+            <label>Documento publicável<select name="document" required><option value="">Selecione um documento aprovado</option>{approvedDocs.map(doc=><option key={doc.id} value={doc.id}>Versão {doc.version} · {doc.original_name}</option>)}</select></label>
             <button className="button" type="submit">Publicar</button>
           </form>
         </details>
@@ -413,6 +419,53 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
           <summary>Gerenciar publicações</summary>
           <p>Secretaria pode retirar publicações. O histórico é preservado.</p>
         </details>
+      )}
+    </section>
+  )
+}
+
+export function PublicAcervoPanel(){
+  const[items,setItems]=useState<AcervoPublicItem[]>([])
+  const[query,setQuery]=useState('')
+  const[message,setMessage]=useState('')
+  const[busy,setBusy]=useState(true)
+  const refresh=useCallback(async()=>{
+    setBusy(true)
+    try{setItems(await listAcervoPublico(query))}catch(e){setMessage(failure(e))}
+    finally{setBusy(false)}
+  },[query])
+  useEffect(()=>{void refresh()},[refresh])
+  return (
+    <section className="profile-section" aria-labelledby="acervo-publico-title">
+      <header className="showcase-header">
+        <div>
+          <span className="eyebrow">Acervo público</span>
+          <h2 id="acervo-publico-title">Acervo de projetos publicados</h2>
+          <p>Acesso público aos metadados de projetos apresentados na Mostra e publicados com documento aprovado.</p>
+        </div>
+      </header>
+      {message&&<p role="status" className="alert">{message}</p>}
+      <div className="subheading">
+        <h3>Pesquisa</h3>
+        <p>Busque por título do projeto.</p>
+      </div>
+      <form className="project-form compact" onSubmit={event=>{
+        event.preventDefault()
+        void refresh()
+      }}>
+        <label>Buscar<input name="q" type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Título do projeto"/></label>
+        <button className="button" type="submit">Pesquisar</button>
+      </form>
+      {busy?<p>Carregando acervo…</p>:items.length===0?<p className="empty-state">Nenhum projeto publicado encontrado.</p>:(
+        <div className="acervo-grid">
+          {items.map(item=>
+            <article key={item.id} className="project-card">
+              <h3>{item.project_name}</h3>
+              <p>Documento versão {item.document_version}</p>
+              <small>Publicado em {new Date(item.published_at).toLocaleString('pt-BR')}</small>
+            </article>
+          )}
+        </div>
       )}
     </section>
   )
@@ -460,6 +513,64 @@ export function AcervoPanel(){
             </article>
           )}
         </div>
+      )}
+    </section>
+  )
+}
+
+export function EvaluationsPage({user}:{user:Profile}){
+  const[projects,setProjects]=useState<Project[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true)
+  async function refresh(){setBusy(true);try{const data=await listProfessorProjects();setProjects(data.filter(p=>p.status==='APPROVED'&&p.group))}catch(e){setMessage(failure(e))}finally{setBusy(false)}}
+  useEffect(()=>{void refresh()},[])
+  if(user.role!=='PROFESSOR'&&user.role!=='ADMIN'&&user.role!=='SECRETARIAT')return null
+  return (
+    <section className="profile-section" aria-labelledby="evaluations-title">
+      <div className="showcase-header"><div><span className="eyebrow">Avaliação</span><h2 id="evaluations-title">Avaliações de grupo</h2><p>Avalie projetos aprovados e encaminhados à secretaria.</p></div></div>
+      {message&&<p role="status" className="alert">{message}</p>}
+      {busy?<p>Carregando avaliações…</p>:projects.length===0?<p className="empty-state">Nenhum projeto aprovado pendente de avaliação.</p>:(
+        <div className="module-grid">
+          {projects.map(project=><article key={project.id} className="project-card"><div><h3>{project.name}</h3><p>Grupo: {project.group.name} · {project.group.member_count}/4 integrantes</p><p>Avaliador: {project.group.evaluator_name||'Não designado'}</p></div><div className="action-row"><button className="button" onClick={()=>{window.location.hash=`#/group-evaluation/${project.id}`}}>Avaliar grupo</button>{user.role!=='STUDENT'&&project.can_manage&&<button className="button secondary" onClick={()=>{window.location.hash=`#/individual-grades`}}>Notas individuais</button>}</div></article>)}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function IndividualGradesPage({user}:{user:Profile}){
+  const[projects,setProjects]=useState<Project[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[selectedProject,setSelectedProject]=useState<Project|null>(null),[grades,setGrades]=useState<{current:IndividualGrade|null;history:IndividualGrade[]}|null>(null),[studentBusy,setStudentBusy]=useState(false)
+  async function refresh(){setBusy(true);try{const data=await listProfessorProjects();setProjects(data.filter(p=>p.status==='APPROVED'&&p.group))}catch(e){setMessage(failure(e))}finally{setBusy(false)}}
+  useEffect(()=>{void refresh()},[])
+  async function loadStudentGrades(studentId:string){setStudentBusy(true);try{const data=await individualGrades(studentId);setGrades(data)}catch(e){setMessage(failure(e))}finally{setStudentBusy(false)}}
+  async function submitGrade(studentId:string,value:string,comment=''){setStudentBusy(true);try{await gradeIndividual(studentId,{value,comment});setGrades(null);await loadStudentGrades(studentId);setMessage('Nota individual registrada.')}catch(e){setStudentBusy(false);setMessage(failure(e))}}
+  if(user.role!=='PROFESSOR')return null
+  return (
+    <section className="profile-section" aria-labelledby="individual-grades-title">
+      <div className="showcase-header"><div><span className="eyebrow">Notas individuais</span><h2 id="individual-grades-title">Notas individuais por aluno</h2><p>Orientador registra nota de 0 a 10 para cada aluno do seu grupo.</p></div></div>
+      {message&&<p role="status" className="alert">{message}</p>}
+      {busy?<p>Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto aprovado com grupo.</p>:(
+        <><div className="subheading"><h3>Escolha o projeto</h3></div>
+        {projects.map(project=><button key={project.id} className="button secondary" onClick={()=>{setSelectedProject(project);setGrades(null)}}>{project.name} · Grupo {project.group.name}</button>)}
+        {selectedProject&&(
+          <><div className="subheading"><h3>{selectedProject.name} · Grupo {selectedProject.group.name}</h3></div>
+          {selectedProject.group.members.map(member=><article key={member.user_id} className="project-card"><div><h4>{member.name}</h4><p>RA: {member.ra}</p></div>
+          {grades&&grades.current&&grades.current.student===member.user_id?(
+            <><p>Nota atual: <strong>{grades.current.value}</strong></p><p>Comentário: {grades.current.comment||'—'}</p><p><small>Registrado em {new Date(grades.current.created_at).toLocaleString('pt-BR')}</small></p></>
+          ):(
+            <form className="project-form compact" onSubmit={event=>{
+              event.preventDefault();const data=new FormData(event.currentTarget);void submitGrade(member.user_id,String(data.get('value')),String(data.get('comment')||''))
+            }}>
+              <label>Nota (0 a 10)<input name="value" type="number" min="0" max="10" step="0.1" required/></label>
+              <label>Comentário<textarea name="comment" rows={2} maxLength={2000}></textarea></label>
+              <button className="button" type="submit" disabled={studentBusy}>{studentBusy?'Salvando…':'Salvar nota'}</button>
+            </form>
+          )}
+          {grades&&grades.history.length>0&&(
+            <details><summary>Histórico</summary>{grades.history.map(h=><p key={h.id}>{h.value} · {new Date(h.created_at).toLocaleString('pt-BR')}</p>)}</details>
+          )}
+          </article>)}
+          </>
+        )}
+        </>
       )}
     </section>
   )
