@@ -33,7 +33,7 @@
 
 ## Próximas
 
-- Commit das mudanças pendentes desta sessão (aguardando confirmação do usuário).
+- Empurrar os 11 commits para `origin/main` (não empurrados)
 - Execução dos testes E2E Playwright no CI (requer backend rodando e E2E_TEST_PASSWORD)
 - Tela pública anônima do acervo no frontend (hoje só existe o endpoint `/projects/acervo-publico/`)
 
@@ -101,6 +101,6 @@
 
 - Bug pré-existente: `App > cria o projeto antes de formar o grupo` falha no frontend — verificado falhar também no HEAD sem alterações (stash).
 - Cobertura backend: 92% (mínimo 85%).
-- Branch: `main`, **9 commits à frente de `origin/main`** (não empurrados).
-- Último commit: `c5321ab6` feat: formulário de documento publicável com conteúdo editável até aprovação do orientador
+- Branch: `main`, **11 commits à frente de `origin/main`** (não empurrados).
+- Último commit: `542f8f2` feat: suporte a templates de projeto e ajuste de convites e login
 - Ver `DESAFIOS.md` antes de retomar (PowerShell, como rodar pytest local, bugs já corrigidos).
