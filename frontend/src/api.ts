@@ -75,7 +75,7 @@ export const listRoomTransferRequests=()=>request<RoomTransferRequest[]>('/acade
 export const decideRoomTransfer=(id:string,decision:'approve'|'decline',decision_note='')=>request<RoomTransferRequest>(`/academic/room-transfer-requests/${id}/${decision}/`,{method:'POST',body:JSON.stringify({decision_note})})
 
 export type ProjectTheme={id:string;room:string;room_name:string;title:string;description:string;is_open:boolean;max_projects:number|null;project_count:number}
-export const listThemes=()=>request<ProjectTheme[]>('/projects/themes/')
+export const listThemes=(is_template='')=>request<ProjectTheme[]>(`/projects/themes/?is_template=${encodeURIComponent(is_template)}`)
 export const saveTheme=(data:{room:string;title:string;description:string;max_projects:number|null})=>request<ProjectTheme>('/projects/themes/',{method:'POST',body:JSON.stringify(data)})
 export const updateTheme=(id:string,data:Partial<Pick<ProjectTheme,'title'|'description'|'is_open'|'max_projects'>>)=>request<ProjectTheme>(`/projects/themes/${id}/`,{method:'PATCH',body:JSON.stringify(data)})
 export const searchThemeStudents=(id:string,q:string)=>request<EligibleStudent[]>(`/projects/themes/${id}/students/?q=${encodeURIComponent(q)}`)

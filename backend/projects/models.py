@@ -29,6 +29,13 @@ class Project(models.Model):
         related_name="projects",
     )
     theme_snapshot = models.JSONField(default=dict, blank=True)
+    origin_template = models.ForeignKey(
+        "ProjectTheme",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="projects_from_template",
+    )
     previous_status = models.CharField(max_length=20, blank=True)
     class_offering = models.ForeignKey(
         ClassOffering, on_delete=models.PROTECT, related_name="projects"
@@ -105,6 +112,7 @@ class ProjectTheme(models.Model):
     description = models.TextField(max_length=6000)
     is_open = models.BooleanField(default=True)
     max_projects = models.PositiveIntegerField(null=True, blank=True)
+    is_template = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

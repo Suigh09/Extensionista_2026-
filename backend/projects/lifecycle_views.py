@@ -57,6 +57,9 @@ class ThemeListView(APIView):
                 room__status="ACTIVE",
                 is_open=True,
             )
+            is_template = request.query_params.get("is_template", "").strip().lower()
+            if is_template == "true":
+                themes = themes.filter(is_template=True)
         elif not is_admin(request.user):
             themes = themes.filter(room__responsible_professor__user=request.user)
         for word in request.query_params.get("q", "")[:100].split():

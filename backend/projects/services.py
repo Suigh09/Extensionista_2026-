@@ -124,8 +124,7 @@ def create_invitation(*, actor, group, invitee):
     require_mutable(project)
     locked_group = ProjectGroup.objects.select_for_update().get(pk=group.pk)
     inviter = require_member(actor, locked_group)
-    if locked_group.leader_id and locked_group.leader_id != inviter.pk:
-        raise PermissionDenied("Somente o líder pode organizar os convites do grupo.")
+    # Qualquer membro ativo do grupo pode criar convites
     if not locked_group.is_active or not locked_group.project.is_active:
         raise ValidationError("O grupo não está ativo.")
     if invitee.user_id == actor.pk:
