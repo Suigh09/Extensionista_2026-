@@ -102,6 +102,6 @@
 
 - Bug pré-existente: `App > cria o projeto antes de formar o grupo` falha no frontend — verificado falhar também no HEAD sem alterações (stash).
 - Cobertura backend: 92% (mínimo 85%).
-- Branch: `main`, sincronizada com `origin/main` (último commit `7ec8d09`)
-- Último commit: `7ec8d09` docs: registrar limitação dos testes E2E no DESAFIOS.md
+- Branch: `main`, sincronizada com `origin/main` (último commit `0245503`)
+- Último commit: `0245503` feat: implementar 3 ideias do backlog da Sprint 7
 - Ver `DESAFIOS.md` antes de retomar (PowerShell, como rodar pytest local, bugs já corrigidos).

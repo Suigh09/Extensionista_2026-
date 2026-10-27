@@ -21,6 +21,9 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - Tela de avaliações (#/evaluations) substituindo FutureModule
 - Tela de designar avaliador (#/evaluator-designation/<id>) integrada na sidebar
 - Páginas independentes de avaliação de grupo (#/group-evaluation/<id>) e notas individuais (#/individual-grades)
+- Colaboração sem grupo atribuído: aluno ativo pode publicar oportunidade individual (sem grupo); grupos podem se candidatar (backend `CollaborationOpportunity.group` nullable; frontend `CommunityPage` com checkbox "Individual")
+- Template Colaboração Interdisciplinar: `ProjectTheme.interdisciplinary` boolean; `create_from_theme` ignora restrição de mesma sala/curso quando interdisciplinary=True; filtro `?interdisciplinary=true` na listagem de temas; frontend `ThemeManagement` com checkbox e `ThemeProjectCreate` com filtro
+- Convidar mais participantes após entrar no projeto: `ProjectGroupPanel` permite ao líder convidar até 4 integrantes no total (já existente via `inviteStudent`/`assignProjectStudent`)
 
 ## O que parece funcionar
 
@@ -164,11 +167,10 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Branch e commits recentes
 
 - Branch: `main`, sincronizada com `origin/main`
-- Último commit: `7ec8d09` docs: registrar limitação dos testes E2E no DESAFIOS.md
+- Último commit: `0245503` feat: implementar 3 ideias do backlog da Sprint 7
 
 ## Próximas ações
 
-1. **Commit** das mudanças do acervo e avaliação frontend
-2. Executar testes E2E Playwright no CI (GF-09/GF-10)
-3. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
+1. Executar testes E2E Playwright no CI (GF-09/GF-10) — bloqueado por falta de Docker Desktop
+2. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
 4. Resolver erro 500 no login do Playwright (possível problema de CSRF/CSRF token entre frontend Vite na porta 5173 e backend Django na porta 8000)
