@@ -102,6 +102,6 @@
 
 - Bug pré-existente: `App > cria o projeto antes de formar o grupo` falha no frontend — verificado falhar também no HEAD sem alterações (stash).
 - Cobertura backend: 92% (mínimo 85%).
-- Branch: `main`, sincronizada com `origin/main` (último commit `0245503`)
-- Último commit: `0245503` feat: implementar 3 ideias do backlog da Sprint 7
+- Branch: `main`, sincronizada com `origin/main` (último commit pendente)
+- Último commit: não commitado ainda
 - Ver `DESAFIOS.md` antes de retomar (PowerShell, como rodar pytest local, bugs já corrigidos).

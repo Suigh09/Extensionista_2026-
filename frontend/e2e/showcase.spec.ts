@@ -180,7 +180,7 @@ test('GF-09: publicacao valida do aluno no acervo',async({page,request})=>{
 
   // Acervo exibe o projeto publicado (autenticado)
   await uiLogin(page,SECRETARIAT.identifier)
-  await page.getByRole('button',{name:'Acervo publicado'}).click()
+  await page.getByRole('button',{name:'Acervo'}).click()
   await expect(page.getByText(PROJECT_NAME)).toBeVisible()
   await uiLogout(page)
 })

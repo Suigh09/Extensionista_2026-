@@ -141,7 +141,7 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 - `backend/projects/urls.py`: import de `AcervoPublicListView` adicionado
 - `backend/tests/test_showcase.py`: novo teste `test_acervo_publico_permite_acesso_anonimo`
 - `frontend/src/showcase.test.tsx`: fixture `project` completando campos que faltavam (`class_offering`, `submitted_at`, etc.) + removido `is_active` dos membros (compatível com tipo `Member`)
-- `frontend/src/App.tsx`: remoção do item `['acervo','Acervo publicado']` da navegação sidebar; notebook `pageTitles` mantido
+- `frontend/src/App.tsx`: remoção do item `['acervo','Acervo publicado']` da navegação sidebar e dos atalhos da home; rota `#/acervo` descontinuada
 - `frontend/src/showcase.test.tsx`: fixture `project` completando faltando campos para `tsc -b` aprovar
 - `frontend/e2e/showcase.spec.ts`: remoção de variável `safe` não usada
 - `frontend/src/styles.css`: estilos dos blocos da tela de projetos (+ warnings pré-existentes)
@@ -172,5 +172,4 @@ Sprint 7 implementada e validada. Funcionalidades entregues:
 ## Próximas ações
 
 1. Executar testes E2E Playwright no CI (GF-09/GF-10) — bloqueado por falta de Docker Desktop
-2. Definir decisão sobre atalhos duplicados da home ('Acervo' vs 'Acervo publicado')
-4. Resolver erro 500 no login do Playwright (possível problema de CSRF/CSRF token entre frontend Vite na porta 5173 e backend Django na porta 8000)
+2. Resolver erro 500 no login do Playwright (possível problema de CSRF/CSRF token entre frontend Vite na porta 5173 e backend Django na porta 8000)
