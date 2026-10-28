@@ -1,9 +1,8 @@
 import{expect,test,type APIRequestContext,type Page}from'@playwright/test'
 
 // Sprint 7 contra backend real: aluno gera documento → orientador aprova →
-// aluno publica no acervo (GF-09); publicação inválida é bloqueada (GF-10);
-// secretaria retira publicação.
-// Pula sem backend (CI). Requer usuários teste1/teste2 e senha via E2E_TEST_PASSWORD.
+// aluno publica no acervo (GF-09); publicação inválida é bloqueada (GF-10).
+// Pula sem backend (CI). Requer E2E_TEST_PASSWORD.
 
 const API=process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1'
 const PASSWORD=process.env.E2E_TEST_PASSWORD ?? ''
@@ -59,7 +58,7 @@ async function cancelActive(request:APIRequestContext,identifier:string){
   const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
   for(const project of actives){
     const dec=await request.post(`${API}/projects/${project.id}/lifecycle/`,{headers:{'X-CSRFToken':secToken},data:{action:'approve-cancellation',reason:'Limpeza E2E'}})
-    if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()} ${(await dec.text()).slice(0,200)}`)
+    if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()} ${await dec.text()}`)
   }
 }
 
@@ -85,19 +84,6 @@ async function prepareApprovedProject(request:APIRequestContext){
   const profToken=await apiLogin(request,ORIENTADOR.identifier,ORIENTADOR.password)
   const approved=await request.post(`${API}/projects/${project.id}/approve/`,{headers:{'X-CSRFToken':await csrf(request)},data:{feedback:''}})
   if(!approved.ok())throw new Error(`E2E aprovar projeto falhou: ${approved.status()} ${(await approved.text()).slice(0,200)}`)
-
-  // Aluno gera documento
-  const docData=new FormData()
-  docData.append('pdf',new Blob([Buffer.from('%PDF-1.4 documento e2e')],{type:'application/pdf'}),'documento.pdf')
-  docData.append('consent_given','true')
-  const docResp=await request.post(`${API}/projects/${project.id}/publication-documents/`,{headers:{'X-CSRFToken':await csrf(request)},body:docData})
-  if(!docResp.ok())throw new Error(`E2E gerar documento falhou: ${docResp.status()} ${(await docResp.text()).slice(0,200)}`)
-  const doc=await docResp.json() as {id:string}
-
-  // Orientador aprova documento
-  const docApproved=await request.post(`${API}/projects/publication-documents/${doc.id}/review/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({status:'APPROVED',review:'Aprovado para acervo E2E'})})
-  if(!docApproved.ok())throw new Error(`E2E aprovar documento falhou: ${docApproved.status()} ${(await docApproved.text()).slice(0,200)}`)
-
   return project.id as string
 }
 
@@ -109,18 +95,12 @@ test.beforeEach(async({request},testInfo)=>{
   requirePassword()
   await cancelActive(request,ALUNO.identifier)
 })
-test.afterEach(async({request},testInfo)=>{
-  if(testInfo.project.name!=='desktop')return
-  if(!await backendAvailable(request))return
-  await cancelActive(request,ALUNO.identifier)
-})
 
 async function uiLogin(page:Page,identifier:string){
   page.on('console', msg => console.log('PAGE LOG:', msg.text()))
   page.on('pageerror', err => console.log('PAGE ERROR:', err.message))
   await page.goto('/')
   await page.waitForLoadState('networkidle')
-  console.log('PAGE LOG: url=', page.url(), 'title=', await page.title())
   if(await page.getByRole('heading',{name:'Início'}).isVisible())return
   await page.getByLabel('CPF, RA ou usuário').fill(identifier)
   await page.getByLabel('Senha',{exact:true}).fill(PASSWORD)
