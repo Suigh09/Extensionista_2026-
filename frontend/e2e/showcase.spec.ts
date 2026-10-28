@@ -6,6 +6,8 @@ function requirePassword(){
   if(!PASSWORD)throw new Error('Defina E2E_TEST_PASSWORD com a senha dos usuários de teste locais.')
 }
 const ALUNO={identifier:'RA3001',password:PASSWORD}
+const ORIENTADOR={identifier:'prof.teste1',password:PASSWORD}
+const SECRETARIAT={identifier:'secretaria.teste',password:PASSWORD}
 const PROJECT_NAME=`Projeto E2E Acervo ${Date.now()}`
 
 type ProjectSummary={id:string;status:string}
@@ -97,5 +99,5 @@ test('GF-10: bloqueio de publicacao invalida',async({request})=>{
   const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:publishBody})
   if(publishResp.ok())throw new Error('E2E publicação inválida não foi bloqueada')
   const body=await publishResp.text()
-  if(!/aprovado/i.test(body))throw new Error(`E2E mensagem de erro inesperada: ${body}`)
+  if(!/document/i.test(body))throw new Error(`E2E mensagem de erro inesperada: ${body}`)
 })
