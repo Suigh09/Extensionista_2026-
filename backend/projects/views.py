@@ -159,7 +159,7 @@ class ProjectReviewView(APIView):
         project = accessible_project(request.user, project_id)
         project = Project.objects.select_for_update().get(pk=project.pk)
         profile = request.user.professor_profile
-        if not project.groups.filter(is_active=True, responsible_professor=profile).exists():
+        if not project.groups.filter(is_active=True, responsible_professor__pk=profile.pk).exists():
             raise PermissionDenied("Somente o professor orientador pode avaliar este projeto.")
         if project.status != Project.Status.PENDING_APPROVAL:
             raise ValidationError("O projeto não está aguardando aprovação.")

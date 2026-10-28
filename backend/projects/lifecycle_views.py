@@ -1,4 +1,4 @@
-from academic.models import AcademicRoom, StudentProfile
+from academic.models import AcademicRoom, RoomMembership, StudentProfile
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -110,7 +110,14 @@ class ThemeStudentsView(APIView):
 
     def get(self, request, theme_id):
         theme = get_object_or_404(ProjectTheme.objects.select_related("room"), pk=theme_id)
-        require_room_manager(request.user, theme.room)
+        if request.user.role == "STUDENT":
+            student_profile = getattr(request.user, "student_profile", None)
+            if not student_profile or not RoomMembership.objects.filter(
+                room=theme.room, student=student_profile, is_active=True
+            ).exists():
+                raise PermissionDenied("Somente membros da sala podem consultar alunos elegíveis.")
+        else:
+            require_room_manager(request.user, theme.room)
         query = request.query_params.get("q", "").strip()[:100]
         students = StudentProfile.objects.none()
         if len(query) >= 2:
