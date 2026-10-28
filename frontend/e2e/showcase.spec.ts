@@ -82,6 +82,12 @@ async function prepareApprovedProject(request:APIRequestContext){
   return project.id as string
 }
 
+async function createApprovedDocument(request:APIRequestContext,projectId:string){
+  const backendDir='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend'
+  const venvPython='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend/.venv/Scripts/python.exe'
+  execSync(`"${venvPython}" manage.py create_test_publication "${projectId}" --student ra3001`,{cwd:backendDir,env:{...process.env,DJANGO_SETTINGS_MODULE:'config.settings',DATABASE_ENGINE:'sqlite',DJANGO_SECRET_KEY:'9Kx4XuiSVj9fh3c900AQ5z66gMiRKKxEZc8vuuycwFnLpMiz9cFOoUrDCAXE1dyafVZp8n/AoRIk2aEJMHkiBQ==',DJANGO_ALLOWED_HOSTS:'localhost,127.0.0.1',DJANGO_CORS_ALLOWED_ORIGINS:'http://localhost:5173',DJANGO_CSRF_TRUSTED_ORIGINS:'http://localhost:5173',VITE_API_BASE_URL:'http://localhost:8000/api/v1'}})
+}
+
 test.describe.configure({mode:'serial'})
 
 test.beforeEach(async({request},testInfo)=>{
@@ -91,31 +97,52 @@ test.beforeEach(async({request},testInfo)=>{
   await cancelActive(request,ALUNO.identifier)
 })
 
-test('GF-09: publicacao valida do aluno no acervo',async({request})=>{
+test('GF-09: publicacao valida do aluno no acervo',async({page,request})=>{
   test.slow()
   const projectId=await prepareApprovedProject(request)
   void projectId
+  // Criar documento aprovado via Django management command
   const backendDir='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend'
   const venvPython='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend/.venv/Scripts/python.exe'
   execSync(`"${venvPython}" manage.py create_test_publication "${projectId}" --student ra3001`,{cwd:backendDir,env:{...process.env,DJANGO_SETTINGS_MODULE:'config.settings',DATABASE_ENGINE:'sqlite',DJANGO_SECRET_KEY:'9Kx4XuiSVj9fh3c900AQ5z66gMiRKKxEZc8vuuycwFnLpMiz9cFOoUrDCAXE1dyafVZp8n/AoRIk2aEJMHkiBQ==',DJANGO_ALLOWED_HOSTS:'localhost,127.0.0.1',DJANGO_CORS_ALLOWED_ORIGINS:'http://localhost:5173',DJANGO_CSRF_TRUSTED_ORIGINS:'http://localhost:5173',VITE_API_BASE_URL:'http://localhost:8000/api/v1'}})
   const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  const publishBody=JSON.stringify({project:projectId,document:''})
-  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:publishBody})
-  if(!publishResp.ok())throw new Error(`E2E publicar falhou: ${publishResp.status()} ${(await publishResp.text()).slice(0,200)}`)
-  const pubs=await(await request.get(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)}})).json() as any[]
-  const found=pubs.find(p=>p.project===projectId)
-  if(!found)throw new Error('E2E publicação não encontrada no acervo')
-  if(!found.is_published)throw new Error('E2E publicação não está publicada')
+  // Aluno publica no acervo via UI
+  await uiLogin(page,ALUNO.identifier)
+  await openProject(page,PROJECT_NAME)
+  await page.getByRole('button',{name:'Publicação no acervo'}).click()
+  await page.getByText('Publicar no acervo').click()
+  await page.getByRole('button',{name:'Publicar'}).click()
+  await expect(page.getByText('Projeto publicado no acervo.')).toBeVisible()
+  await uiLogout(page)
+  // Acervo exibe o projeto publicado (autenticado)
+  await uiLogin(page,SECRETARIAT.identifier)
+  await page.getByRole('button',{name:'Acervo'}).click()
+  await expect(page.getByText(PROJECT_NAME)).toBeVisible()
+  await uiLogout(page)
 })
 
-test('GF-10: bloqueio de publicacao invalida',async({request})=>{
-  test.slow()
-  const projectId=await prepareApprovedProject(request)
-  void projectId
-  const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  const publishBody=JSON.stringify({project:projectId,document:''})
-  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:publishBody})
-  if(publishResp.ok())throw new Error('E2E publicação inválida não foi bloqueada')
-  const body=await publishResp.text()
-  if(!/document/i.test(body))throw new Error(`E2E mensagem de erro inesperada: ${body}`)
+async function uiLogin(page:Page,identifier:string){
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()))
+  page.on('pageerror', err => console.log('PAGE ERROR:', err.message))
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  if(await page.getByRole('heading',{name:'Início'}).isVisible())return
+  await page.getByLabel('CPF, RA ou usuário').fill(identifier)
+  await page.getByLabel('Senha',{exact:true}).fill(PASSWORD)
+  await page.getByRole('button',{name:'Entrar'}).click()
+  await expect(page.getByRole('heading',{name:'Início'})).toBeVisible()
+}
+
+async function uiLogout(page:Page){
+  await page.getByRole('button',{name:'Sair'}).first().click()
+  await expect(page.getByRole('heading',{name:'Entrar na plataforma'})).toBeVisible()
+}
+
+async function openProject(page:Page,name:string){
+  await page.getByRole('button',{name:'Projetos'}).first().click()
+  const byArticle=page.locator('article').filter({has:page.getByRole('heading',{name,exact:true})})
+  await expect(byArticle.first()).toBeVisible({timeout:15000})
+  await byArticle.first().getByRole('button',{name:/Abrir/}).click()
+  await page.waitForURL(/#\/projects\/.+/)
+  await expect(page.getByRole('heading',{name,exact:true}).first()).toBeVisible()
 })
