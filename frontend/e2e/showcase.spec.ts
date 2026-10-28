@@ -95,12 +95,12 @@ test('GF-09: publicacao valida do aluno no acervo',async({request})=>{
   test.slow()
   const projectId=await prepareApprovedProject(request)
   void projectId
-  // Criar documento aprovado via Django management command
   const backendDir='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend'
   const venvPython='C:/Users/gustavo.alves/Documents/1.Python/plataforma_extensionista/backend/.venv/Scripts/python.exe'
   execSync(`"${venvPython}" manage.py create_test_publication "${projectId}" --student ra3001`,{cwd:backendDir,env:{...process.env,DJANGO_SETTINGS_MODULE:'config.settings',DATABASE_ENGINE:'sqlite',DJANGO_SECRET_KEY:'9Kx4XuiSVj9fh3c900AQ5z66gMiRKKxEZc8vuuycwFnLpMiz9cFOoUrDCAXE1dyafVZp8n/AoRIk2aEJMHkiBQ==',DJANGO_ALLOWED_HOSTS:'localhost,127.0.0.1',DJANGO_CORS_ALLOWED_ORIGINS:'http://localhost:5173',DJANGO_CSRF_TRUSTED_ORIGINS:'http://localhost:5173',VITE_API_BASE_URL:'http://localhost:8000/api/v1'}})
   const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({project:projectId,document:''}}))
+  const publishBody=JSON.stringify({project:projectId,document:''})
+  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:publishBody})
   if(!publishResp.ok())throw new Error(`E2E publicar falhou: ${publishResp.status()} ${(await publishResp.text()).slice(0,200)}`)
   const pubs=await(await request.get(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)}})).json() as any[]
   const found=pubs.find(p=>p.project===projectId)
