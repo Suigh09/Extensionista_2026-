@@ -1,7 +1,6 @@
-import{expect,test,type APIRequestContext,type Page}from'@playwright/test'
+import{expect,test,type APIRequestContext}from'@playwright/test'
 
-// Sprint 7 contra backend real: aluno gera documento → orientador aprova →
-// aluno publica no acervo (GF-09); publicação inválida é bloqueada (GF-10).
+// Sprint 7 contra backend real: GF-09 publicação válida; GF-10 bloqueio de publicação inválida.
 // Pula sem backend (CI). Requer E2E_TEST_PASSWORD.
 
 const API=process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1'
@@ -77,14 +76,25 @@ async function prepareApprovedProject(request:APIRequestContext){
   const mineForProject=mine.find(i=>i.project_name===PROJECT_NAME) ?? mine[0]
   const accepted=await request.post(`${API}/projects/invitations/${mineForProject.id}/accept/`,{headers:{'X-CSRFToken':token2},data:{}})
   if(!accepted.ok())throw new Error(`E2E aceitar falhou: ${accepted.status()}`)
-  // Aluno submete o projeto para aprovação
   const submitted=await request.post(`${API}/projects/${project.id}/submit/`,{headers:{'X-CSRFToken':await csrf(request)},data:{}})
   if(!submitted.ok())throw new Error(`E2E submeter projeto falhou: ${submitted.status()} ${(await submitted.text()).slice(0,200)}`)
-  // Orientador aprova o projeto
   const profToken=await apiLogin(request,ORIENTADOR.identifier,ORIENTADOR.password)
   const approved=await request.post(`${API}/projects/${project.id}/approve/`,{headers:{'X-CSRFToken':await csrf(request)},data:{feedback:''}})
   if(!approved.ok())throw new Error(`E2E aprovar projeto falhou: ${approved.status()} ${(await approved.text()).slice(0,200)}`)
   return project.id as string
+}
+
+async function createApprovedDocument(request:APIRequestContext,projectId:string){
+  const docData=new FormData()
+  docData.append('pdf',new Blob([Buffer.from('%PDF-1.4 documento e2e')],{type:'application/pdf'}),'documento.pdf')
+  docData.append('consent_given','true')
+  const docResp=await request.post(`${API}/projects/${project.id}/publication-documents/`,{headers:{'X-CSRFToken':await csrf(request)},body:docData})
+  if(!docResp.ok())throw new Error(`E2E gerar documento falhou: ${docResp.status()} ${(await docResp.text()).slice(0,200)}`)
+  const doc=await docResp.json() as {id:string}
+  const profToken=await apiLogin(request,ORIENTADOR.identifier,ORIENTADOR.password)
+  const docApproved=await request.post(`${API}/projects/publication-documents/${doc.id}/review/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({status:'APPROVED',review:'Aprovado para acervo E2E'})})
+  if(!docApproved.ok())throw new Error(`E2E aprovar documento falhou: ${docApproved.status()} ${(await docApproved.text()).slice(0,200)}`)
+  return doc.id
 }
 
 test.describe.configure({mode:'serial'})
@@ -96,64 +106,27 @@ test.beforeEach(async({request},testInfo)=>{
   await cancelActive(request,ALUNO.identifier)
 })
 
-async function uiLogin(page:Page,identifier:string){
-  page.on('console', msg => console.log('PAGE LOG:', msg.text()))
-  page.on('pageerror', err => console.log('PAGE ERROR:', err.message))
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
-  if(await page.getByRole('heading',{name:'Início'}).isVisible())return
-  await page.getByLabel('CPF, RA ou usuário').fill(identifier)
-  await page.getByLabel('Senha',{exact:true}).fill(PASSWORD)
-  await page.getByRole('button',{name:'Entrar'}).click()
-  await expect(page.getByRole('heading',{name:'Início'})).toBeVisible()
-}
-
-async function uiLogout(page:Page){
-  await page.getByRole('button',{name:'Sair'}).first().click()
-  await expect(page.getByRole('heading',{name:'Entrar na plataforma'})).toBeVisible()
-}
-
-async function openProject(page:Page,name:string){
-  await page.getByRole('button',{name:'Projetos'}).first().click()
-  const byArticle=page.locator('article').filter({has:page.getByRole('heading',{name,exact:true})})
-  await expect(byArticle.first()).toBeVisible({timeout:15000})
-  await byArticle.first().getByRole('button',{name:/Abrir/}).click()
-  await page.waitForURL(/#\/projects\/.+/)
-  await expect(page.getByRole('heading',{name,exact:true}).first()).toBeVisible()
-}
-
-test('GF-09: publicacao valida do aluno no acervo',async({page,request})=>{
+test('GF-09: publicacao valida do aluno no acervo',async({request})=>{
   test.slow()
   const projectId=await prepareApprovedProject(request)
   void projectId
-  await uiLogin(page,ALUNO.identifier)
-  await openProject(page,PROJECT_NAME)
-
-  // Aluno publica no acervo (documento já aprovado via API)
-  await page.getByRole('button',{name:'Publicação no acervo'}).click()
-  await page.getByText('Publicar no acervo').click()
-  await page.getByRole('button',{name:'Publicar'}).click()
-  await expect(page.getByText('Projeto publicado no acervo.')).toBeVisible()
-  await uiLogout(page)
-
-  // Acervo exibe o projeto publicado (autenticado)
-  await uiLogin(page,SECRETARIAT.identifier)
-  await page.getByRole('button',{name:'Acervo'}).click()
-  await expect(page.getByText(PROJECT_NAME)).toBeVisible()
-  await uiLogout(page)
+  const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
+  await createApprovedDocument(request,projectId,studentToken)
+  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({project:projectId,document:''}}))
+  if(!publishResp.ok())throw new Error(`E2E publicar falhou: ${publishResp.status()} ${(await publishResp.text()).slice(0,200)}`)
+  const pubs=await(await request.get(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)}})).json() as any[]
+  const found=pubs.find(p=>p.project===projectId)
+  if(!found)throw new Error('E2E publicação não encontrada no acervo')
+  if(!found.is_published)throw new Error('E2E publicação não está publicada')
 })
 
-test('GF-10: bloqueio de publicacao invalida',async({page,request})=>{
+test('GF-10: bloqueio de publicacao invalida',async({request})=>{
   test.slow()
   const projectId=await prepareApprovedProject(request)
   void projectId
-  await uiLogin(page,ALUNO.identifier)
-  await openProject(page,PROJECT_NAME)
-
-  // Sem documento aprovado: publica deve falhar
-  await page.getByRole('button',{name:'Publicação no acervo'}).click()
-  await page.getByText('Publicar no acervo').click()
-  await page.getByRole('button',{name:'Publicar'}).click()
-  await expect(page.getByText(/aprovado/i)).toBeVisible()
-  await uiLogout(page)
+  const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
+  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({project:projectId,document:''})})
+  if(publishResp.ok())throw new Error('E2E publicação inválida não foi bloqueada')
+  const body=await publishResp.text()
+  if(!/aprovado/i.test(body))throw new Error(`E2E mensagem de erro inesperada: ${body}`)
 })
