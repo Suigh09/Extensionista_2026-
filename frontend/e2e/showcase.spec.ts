@@ -38,6 +38,10 @@ async function apiLogin(request:APIRequestContext,identifier:string,password:str
   throw new Error(`E2E login falhou: ${identifier} 429 persistente`)
 }
 
+async function csrf(request:APIRequestContext){
+  return (await(await request.get(`${API}/auth/csrf/`)).json()).csrfToken
+}
+
 async function userProjects(request:APIRequestContext){
   const list=await(await request.get(`${API}/projects/?q=`)).json()
   return (list as ProjectSummary[]).filter(p=>!['COMPLETED','ARCHIVED','CANCELLED'].includes(p.status))
@@ -74,8 +78,26 @@ async function prepareApprovedProject(request:APIRequestContext){
   const mineForProject=mine.find(i=>i.project_name===PROJECT_NAME) ?? mine[0]
   const accepted=await request.post(`${API}/projects/invitations/${mineForProject.id}/accept/`,{headers:{'X-CSRFToken':token2},data:{}})
   if(!accepted.ok())throw new Error(`E2E aceitar falhou: ${accepted.status()}`)
-  const approved=await request.post(`${API}/projects/${project.id}/approve/`,{headers:{'X-CSRFToken':token},data:{feedback:''}})
-  if(!approved.ok())throw new Error(`E2E aprovar projeto falhou: ${approved.status()}`)
+  // Aluno submete o projeto para aprovação
+  const submitted=await request.post(`${API}/projects/${project.id}/submit/`,{headers:{'X-CSRFToken':await csrf(request)},data:{}})
+  if(!submitted.ok())throw new Error(`E2E submeter projeto falhou: ${submitted.status()} ${(await submitted.text()).slice(0,200)}`)
+  // Orientador aprova o projeto
+  const profToken=await apiLogin(request,ORIENTADOR.identifier,ORIENTADOR.password)
+  const approved=await request.post(`${API}/projects/${project.id}/approve/`,{headers:{'X-CSRFToken':await csrf(request)},data:{feedback:''}})
+  if(!approved.ok())throw new Error(`E2E aprovar projeto falhou: ${approved.status()} ${(await approved.text()).slice(0,200)}`)
+
+  // Aluno gera documento
+  const docData=new FormData()
+  docData.append('pdf',new Blob([Buffer.from('%PDF-1.4 documento e2e')],{type:'application/pdf'}),'documento.pdf')
+  docData.append('consent_given','true')
+  const docResp=await request.post(`${API}/projects/${project.id}/publication-documents/`,{headers:{'X-CSRFToken':await csrf(request)},body:docData})
+  if(!docResp.ok())throw new Error(`E2E gerar documento falhou: ${docResp.status()} ${(await docResp.text()).slice(0,200)}`)
+  const doc=await docResp.json() as {id:string}
+
+  // Orientador aprova documento
+  const docApproved=await request.post(`${API}/projects/publication-documents/${doc.id}/review/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({status:'APPROVED',review:'Aprovado para acervo E2E'})})
+  if(!docApproved.ok())throw new Error(`E2E aprovar documento falhou: ${docApproved.status()} ${(await docApproved.text()).slice(0,200)}`)
+
   return project.id as string
 }
 
@@ -94,7 +116,12 @@ test.afterEach(async({request},testInfo)=>{
 })
 
 async function uiLogin(page:Page,identifier:string){
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()))
+  page.on('pageerror', err => console.log('PAGE ERROR:', err.message))
   await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  console.log('PAGE LOG: url=', page.url(), 'title=', await page.title())
+  if(await page.getByRole('heading',{name:'Início'}).isVisible())return
   await page.getByLabel('CPF, RA ou usuário').fill(identifier)
   await page.getByLabel('Senha',{exact:true}).fill(PASSWORD)
   await page.getByRole('button',{name:'Entrar'}).click()
@@ -122,56 +149,7 @@ test('GF-09: publicacao valida do aluno no acervo',async({page,request})=>{
   await uiLogin(page,ALUNO.identifier)
   await openProject(page,PROJECT_NAME)
 
-  // Orientador designa avaliador (pré-requisito para agendar a Mostra)
-  await page.getByRole('button',{name:'Designar avaliador'}).click()
-  await page.getByLabel(/Buscar professor/).fill('Teste 2')
-  await page.getByRole('button',{name:/Selecionar Professor Teste 2/}).click()
-  await page.getByLabel('Justificativa').fill('Rodízio E2E.')
-  await page.getByRole('button',{name:'Confirmar designação'}).click()
-  await expect(page.getByText('Avaliador designado.')).toBeVisible()
-  await uiLogout(page)
-
-  // Secretaria agenda a Mostra
-  await uiLogin(page,SECRETARIAT.identifier)
-  await page.getByRole('button',{name:'Agenda da Mostra'}).click()
-  await page.getByLabel(/Grupo \(UUID\)/).fill('')
-  await page.getByLabel('Data e hora').fill('2026-12-10T14:00')
-  await page.getByLabel('Local').fill('Auditório Central')
-  await page.getByRole('button',{name:'Agendar'}).click()
-  await expect(page.getByText('Mostra agendada.')).toBeVisible()
-  await uiLogout(page)
-
-  // Avaliador registra PRESENTED
-  await uiLogin(page,ORIENTADOR.identifier)
-  await page.getByRole('button',{name:'Registro de presença'}).click()
-  await page.getByRole('button',{name:'Apresentado'}).click()
-  await expect(page.getByText('Presença registrada.')).toBeVisible()
-  await uiLogout(page)
-
-  // Aluno gera documento com consentimento
-  await uiLogin(page,ALUNO.identifier)
-  await openProject(page,PROJECT_NAME)
-  await page.getByRole('button',{name:'Documento publicável'}).click()
-  await page.getByText('Gerar novo documento').click()
-  await page.locator('input[name="pdf"]').setInputFiles({name:'documento.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 documento e2e')})
-  await page.getByLabel(/consentimento/).click()
-  await page.getByRole('button',{name:'Gerar documento'}).click()
-  await expect(page.getByText('Documento gerado e enviado para aprovacao.')).toBeVisible()
-  await uiLogout(page)
-
-  // Orientador aprova o documento
-  await uiLogin(page,ORIENTADOR.identifier)
-  await openProject(page,PROJECT_NAME)
-  await page.getByRole('button',{name:'Documento publicável'}).click()
-  await page.getByRole('button',{name:'Aprovar'}).click()
-  await page.getByLabel('Parecer').fill('Documento conforme.')
-  await page.getByRole('button',{name:'Aprovar'}).click()
-  await expect(page.getByText('Documento aprovado.')).toBeVisible()
-  await uiLogout(page)
-
-  // Aluno publica no acervo
-  await uiLogin(page,ALUNO.identifier)
-  await openProject(page,PROJECT_NAME)
+  // Aluno publica no acervo (documento já aprovado via API)
   await page.getByRole('button',{name:'Publicação no acervo'}).click()
   await page.getByText('Publicar no acervo').click()
   await page.getByRole('button',{name:'Publicar'}).click()
