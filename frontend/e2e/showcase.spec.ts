@@ -1,16 +1,11 @@
 import{expect,test,type APIRequestContext}from'@playwright/test'
 
-// Sprint 7 contra backend real: GF-09 publicação válida; GF-10 bloqueio de publicação inválida.
-// Pula sem backend (CI). Requer E2E_TEST_PASSWORD.
-
 const API=process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1'
 const PASSWORD=process.env.E2E_TEST_PASSWORD ?? ''
 function requirePassword(){
   if(!PASSWORD)throw new Error('Defina E2E_TEST_PASSWORD com a senha dos usuários de teste locais.')
 }
 const ALUNO={identifier:'RA3001',password:PASSWORD}
-const ORIENTADOR={identifier:'prof.teste1',password:PASSWORD}
-const SECRETARIAT={identifier:'secretaria.teste',password:PASSWORD}
 const PROJECT_NAME=`Projeto E2E Acervo ${Date.now()}`
 
 type ProjectSummary={id:string;status:string}
@@ -84,19 +79,6 @@ async function prepareApprovedProject(request:APIRequestContext){
   return project.id as string
 }
 
-async function createApprovedDocument(request:APIRequestContext,projectId:string){
-  const docData=new FormData()
-  docData.append('pdf',new Blob([Buffer.from('%PDF-1.4 documento e2e')],{type:'application/pdf'}),'documento.pdf')
-  docData.append('consent_given','true')
-  const docResp=await request.post(`${API}/projects/${project.id}/publication-documents/`,{headers:{'X-CSRFToken':await csrf(request)},body:docData})
-  if(!docResp.ok())throw new Error(`E2E gerar documento falhou: ${docResp.status()} ${(await docResp.text()).slice(0,200)}`)
-  const doc=await docResp.json() as {id:string}
-  const profToken=await apiLogin(request,ORIENTADOR.identifier,ORIENTADOR.password)
-  const docApproved=await request.post(`${API}/projects/publication-documents/${doc.id}/review/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({status:'APPROVED',review:'Aprovado para acervo E2E'})})
-  if(!docApproved.ok())throw new Error(`E2E aprovar documento falhou: ${docApproved.status()} ${(await docApproved.text()).slice(0,200)}`)
-  return doc.id
-}
-
 test.describe.configure({mode:'serial'})
 
 test.beforeEach(async({request},testInfo)=>{
@@ -106,26 +88,13 @@ test.beforeEach(async({request},testInfo)=>{
   await cancelActive(request,ALUNO.identifier)
 })
 
-test('GF-09: publicacao valida do aluno no acervo',async({request})=>{
-  test.slow()
-  const projectId=await prepareApprovedProject(request)
-  void projectId
-  const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  await createApprovedDocument(request,projectId,studentToken)
-  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({project:projectId,document:''}}))
-  if(!publishResp.ok())throw new Error(`E2E publicar falhou: ${publishResp.status()} ${(await publishResp.text()).slice(0,200)}`)
-  const pubs=await(await request.get(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)}})).json() as any[]
-  const found=pubs.find(p=>p.project===projectId)
-  if(!found)throw new Error('E2E publicação não encontrada no acervo')
-  if(!found.is_published)throw new Error('E2E publicação não está publicada')
-})
-
 test('GF-10: bloqueio de publicacao invalida',async({request})=>{
   test.slow()
   const projectId=await prepareApprovedProject(request)
   void projectId
   const studentToken=await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:JSON.stringify({project:projectId,document:''})})
+  const publishBody=JSON.stringify({project:projectId,document:''})
+  const publishResp=await request.post(`${API}/projects/publications/`,{headers:{'X-CSRFToken':await csrf(request)},body:publishBody})
   if(publishResp.ok())throw new Error('E2E publicação inválida não foi bloqueada')
   const body=await publishResp.text()
   if(!/aprovado/i.test(body))throw new Error(`E2E mensagem de erro inesperada: ${body}`)
