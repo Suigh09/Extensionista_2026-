@@ -46,10 +46,10 @@ incluindo as convenções de rastreabilidade (`UC-xxx`, `RF-xxx`, `RN-xxx`, `IMP
 
 ## Status
 
-O código-fonte do projeto está implementado até a Sprint 4.7 (UC-001 a UC-016).
-A Sprint 7 (Mostra, publicação e acervo — UC-017 a UC-023) está especificada em
-`docs/sprints/SPRINT_07_SPEC.md` com decisões Q1 a Q7 definidas, aguardando aceite
-antes de iniciar a implementação.
+O código-fonte inclui a Sprint 7 (Mostra, publicação e acervo — UC-017 a UC-023),
+com aceite registrado em `TASKS.md`. GF-09/GF-10 foram validados localmente;
+isso não representa aprovação de toda a suíte ou do CI. Veja os resultados e
+pendências atuais em `docs/HANDOFF.md`.
 
 ## Como contribuir
 

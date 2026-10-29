@@ -8,6 +8,22 @@ afterEach(()=>{cleanup();vi.restoreAllMocks();window.history.replaceState({},'',
 const student={id:'1',username:'aluno',name:'Aluno Teste',email:'',role:'STUDENT',profile:{ra:'RA1',cpf:'***.***.***-0001'}}
 
 describe('App',()=>{
+  it('carrega o projeto real na rota de publicação e reconhece o integrante',async()=>{
+    const projectId='b73ce311-c50c-419e-8ba6-f3c1a5332e15'
+    const project={id:projectId,name:'Projeto real',groups:[{id:'grupo-1',members:[{user_id:student.id}]}]}
+    window.history.replaceState({},'',`/#/publication/${projectId}`)
+    const fetch=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+      const url=String(input)
+      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify(student))
+      if(url.endsWith(`/projects/${projectId}/`))return new Response(JSON.stringify(project))
+      return new Response('[]')
+    })
+    render(<App/>)
+    expect(await screen.findByRole('heading',{name:'Publicação do projeto'})).toBeInTheDocument()
+    expect(screen.getByText('Publicar no acervo',{exact:true})).toBeInTheDocument()
+    expect(fetch.mock.calls.some(([input])=>String(input).endsWith(`/projects/${projectId}/`))).toBe(true)
+  })
+
   it('oferece login por CPF, RA ou usuário sem sessão',async()=>{
     vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('{}',{status:403}))
     render(<App/>)

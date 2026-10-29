@@ -29,14 +29,42 @@
 
 ## Em andamento
 
-- Nenhuma tarefa em andamento.
+- Continuação autorizada em 29/10/2026: resolver gates globais e segurança dos
+  utilitários locais, preservando banco/uploads e sem commit/push.
+  1. Atualizar contrato de convites conforme decisão do commit `542f8f2` e testar
+     autorização de consulta de alunos (erro `PermissionDenied`).
+  2. Consolidar preparação E2E e arquivar cópias sanitizadas dos scripts obsoletos.
+  3. Validar Ruff/pytest/cobertura sem reduzir limites ou excluir código ativo.
+  4. Coordenar rotação e atualização do backend Docker identificado no projeto;
+     confirmar saúde e autenticação sem expor credenciais.
 
 ## Próximas
 
-- Empurrar os commits para `origin/main` (feito na sessão atual)
-- Execução dos testes E2E Playwright no CI (requer backend rodando e E2E_TEST_PASSWORD)
-- Migrações 0017/0018 commitadas (templates de projeto); 0019 descartada (duplicata perigosa)
-- Tela pública anônima do acervo no frontend (FEITA — acesso via #/acervo-publico sem login)
+- Execução no CI com fixtures e `E2E_TEST_PASSWORD`; commit/push somente após revisão explícita.
+
+## Bloqueadas
+
+- Nenhuma.
+
+## Finalização GF-09/GF-10 — 29/10/2026
+
+- Login inseguro herdado corrigido: senha e usuário ativo verificados, CSRF,
+  resposta genérica e controle de tentativas restaurados. Oito variações de
+  regressão (DEBUG ligado/desligado, JSON/multipart, senha errada/inativo).
+- Encoding de `frontend/src/App.tsx` reparado preservando lógica; removidos logs
+  de senha/cookies, callbacks experimentais do proxy, esperas fixas e cópia de cookies.
+- GF-09/GF-10 usam nomes distintos e contextos anônimos isolados; aguardam resposta
+  HTTP 200 e renderização do acervo. GF-10 valida o erro JSON exato e ausência
+  da publicação; GF-09 verifica download autenticado e bloqueio anônimo do PDF.
+- Adicionados `.gitignore`, runner `scripts/validate_showcase_e2e.py`, `scripts/prepare_e2e.py`,
+  `scripts/local_environment.py` e `backend/projects/management/commands/seed_e2e_acervo.py`.
+- Scripts experimentais locais com credenciais embutidas arquivados sanitizados em
+  `.runtime/legacy-e2e-20261029/` e removidos do working tree. Logs locais sanitizados.
+- Chaves de aplicação local, senha PostgreSQL e senhas das cinco contas sintéticas
+  rotacionadas com backup criptografado (DPAPI) em `.runtime/rotation-20261029-141253/`.
+- Validação final: E2E **4 passed** (`--repeat-each=2`); frontend **51 passed**,
+  lint sem erros e build OK; backend completo **98 passed**, cobertura **92%**,
+  check e migrações OK, Ruff OK.
 
 ## Concluídas nesta sessão (melhorias de UI/Sprint 7)
 
@@ -82,8 +110,9 @@
   - `PublicAcervoPanel` — tela pública consumindo `GET /projects/acervo-publico/` (sem login), com pesquisa por título
   - Rota `#/acervo-publico` adicionada; item na sidebar para SECRETARIAT/ADMIN; atalho na home para todos
   - `listAcervoPublico` no `api.ts` com tipo `AcervoPublicItem`
-- **Download público do PDF do documento**:
-  - `publicationDocumentDownloadPublicUrl` no `api.ts` — URL pública para download do documento
+- **Download do PDF do documento (autenticado)**:
+  - O helper `publicationDocumentDownloadPublicUrl` aponta ao mesmo endpoint privado;
+    o nome não concede acesso anônimo. GF-09 verifica a restrição.
 - **Select de documentos no PublicationPanel**:
   - `PublicationPanel` agora carrega `PublicationDocument` APPROVED do projeto e preenche o `<select>` de documentos para publicação
 - **Tela de avaliações (#/evaluations)**:
@@ -100,8 +129,7 @@
 
 ## Observações
 
-- Bug pré-existente: `App > cria o projeto antes de formar o grupo` falha no frontend — verificado falhar também no HEAD sem alterações (stash).
-- Cobertura backend: 92% (mínimo 85%).
-- Branch: `main`, sincronizada com `origin/main` (último commit `ae1209f`)
-- Último commit: `ae1209f` feat: remover atalho duplicado 'Acervo publicado' da home
+- As validações nas seções históricas não substituem os resultados atuais do handoff.
+- Branch atual: `main`, HEAD `fb956d1`; há alterações locais não commitadas.
+- Não foi verificada sincronização remota nesta etapa.
 - Ver `DESAFIOS.md` antes de retomar (PowerShell, como rodar pytest local, bugs já corrigidos).

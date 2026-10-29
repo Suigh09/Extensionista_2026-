@@ -3,7 +3,7 @@
 import pytest
 from accounts.models import User
 from django.db import IntegrityError, transaction
-from projects.models import ActiveGroupSlot, GroupMember, Project, ProjectTheme
+from projects.models import ActiveGroupSlot, GroupInvitation, GroupMember, Project, ProjectTheme
 from rest_framework.test import APIClient
 
 from .test_projects import academic_context, create_project  # noqa: F401
@@ -117,23 +117,53 @@ def test_professor_creation_assignment_leader_and_unique_group(academic_context)
     assert assigned.json()["group"]["leader"] == second.pk
     assert create_project(second_client, offering, approved=False).status_code == 400
     assert ActiveGroupSlot.objects.count() == 2
+    # Qualquer integrante ativo pode convidar (decisão do commit 542f8f2).
     _, third, _ = student(4)
+    _, fourth, _ = student(5)
+    outsider, _, outsider_client = student(6, other)
+    invitations_path = f"/api/v1/projects/{project['id']}/invitations/"
+    assert outsider_client.post(
+        invitations_path, {"invitee": third.pk}, format="json"
+    ).status_code == 403
+    assert not GroupInvitation.objects.filter(invited_by__user=outsider).exists()
     assert (
         client.post(
-            f"/api/v1/projects/{project['id']}/invitations/",
-            {"invitee": third.pk},
-            format="json",
-        ).status_code
-        == 403
-    )
-    assert (
-        second_client.post(
-            f"/api/v1/projects/{project['id']}/invitations/",
+            invitations_path,
             {"invitee": third.pk},
             format="json",
         ).status_code
         == 201
     )
+    invitation = GroupInvitation.objects.get(group__project_id=project["id"], invitee=third)
+    assert invitation.invited_by_id == profile.pk
+    assert (
+        second_client.post(
+            invitations_path,
+            {"invitee": fourth.pk},
+            format="json",
+        ).status_code
+        == 201
+    )
+    _, fifth, _ = student(7)
+    assert client.post(
+        invitations_path, {"invitee": fifth.pk}, format="json"
+    ).status_code == 400
+    assert GroupInvitation.objects.filter(group__project_id=project["id"]).count() == 2
+
+
+@pytest.mark.django_db
+@pytest.mark.security
+def test_theme_students_requires_active_room_membership(academic_context):
+    _, other, student = academic_context
+    _, member, member_client = student(1)
+    _, _, outsider_client = student(2, other)
+    room = member.room_memberships.get().room
+    theme = ProjectTheme.objects.create(room=room, title="Consulta", description="Teste")
+    path = f"/api/v1/projects/themes/{theme.pk}/students/?q=RA"
+    assert outsider_client.get(path).status_code == 403
+    assert member_client.get(path).status_code == 200
+    member.room_memberships.update(is_active=False)
+    assert member_client.get(path).status_code == 403
 
 
 @pytest.mark.django_db

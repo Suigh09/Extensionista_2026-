@@ -94,6 +94,37 @@ def test_student_logs_in_with_ra_or_cpf():
 
 @pytest.mark.django_db
 @pytest.mark.security
+@pytest.mark.parametrize("debug", [True, False])
+@pytest.mark.parametrize("payload_format", ["json", "multipart"])
+@pytest.mark.parametrize("invalid_state", ["wrong_password", "inactive"])
+def test_login_rejects_invalid_credentials(settings, capsys, debug, payload_format, invalid_state):
+    settings.DEBUG = debug
+    user = create_user("existing", User.Role.PROFESSOR)
+    if invalid_state == "inactive":
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+    client = APIClient(enforce_csrf_checks=True)
+    token = client.get(reverse("csrf")).json()["csrfToken"]
+    response = client.post(
+        reverse("login"),
+        {
+            "identifier": user.username,
+            "password": "wrong" if invalid_state == "wrong_password" else "Uma-senha-segura-123",
+        },
+        format=payload_format,
+        HTTP_X_CSRFTOKEN=token,
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Credenciais inválidas ou acesso temporariamente indisponível."
+    }
+    assert client.get(reverse("session")).status_code in {401, 403}
+    captured = capsys.readouterr()
+    assert "DEBUG LOGIN" not in captured.out + captured.err
+
+
+@pytest.mark.django_db
+@pytest.mark.security
 def test_login_requires_csrf_and_uses_generic_error():
     client = APIClient(enforce_csrf_checks=True)
     assert (

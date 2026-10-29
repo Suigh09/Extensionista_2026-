@@ -24,7 +24,7 @@ export type AcademicRoom=RoomSummary&{created_at?:string;closed_at?:string|null;
 export type PullStudentResult={action:'ADDED'|'TRANSFER_REQUESTED';detail?:string;transfer_request?:RoomTransferRequest}
 export type RoomTransferRequest={id:string;student_name:string;student_ra:string;source_room_name:string;destination_room_name:string;source_professor_name:string;destination_professor_name:string;status:'PENDING'|'APPROVED'|'DECLINED'|'INVALIDATED';created_at:string;decided_at?:string|null;decision_note?:string}
 
-const API=import.meta.env.VITE_API_BASE_URL??`${window.location.protocol}//${window.location.hostname}:8000/api/v1`
+const API=import.meta.env.VITE_API_BASE_URL??'/api/v1'
 let token=''
 async function csrf(){if(!token){const response=await fetch(`${API}/auth/csrf/`,{credentials:'include'});token=(await response.json()).csrfToken}return token}
 function errorMessage(body:unknown){if(body&&typeof body==='object'){const record=body as Record<string,unknown>;if(typeof record.detail==='string')return record.detail;const first=Object.values(record)[0];if(Array.isArray(first)&&typeof first[0]==='string')return first[0];if(typeof first==='string')return first}return'Não foi possível concluir a operação.'}

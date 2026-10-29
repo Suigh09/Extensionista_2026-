@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --requirement requirements.txt
 COPY backend ./backend
-RUN chown -R app:app /app
+RUN mkdir -p /app/backend/protected-media && chown -R app:app /app
 USER app
 WORKDIR /app/backend
 EXPOSE 8000

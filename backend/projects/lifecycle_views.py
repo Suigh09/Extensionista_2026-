@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -187,7 +187,6 @@ class InstitutionalProjectsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from rest_framework.exceptions import PermissionDenied
         if not is_admin(request.user):
             raise PermissionDenied("Área disponível à Secretaria/Admin.")
         return Response(

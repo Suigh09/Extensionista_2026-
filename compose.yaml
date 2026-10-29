@@ -13,6 +13,7 @@ services:
     build: {context: ., dockerfile: backend/Dockerfile}
     restart: unless-stopped
     env_file: .env
+    volumes: [protected_media:/app/backend/protected-media]
     depends_on: {db: {condition: service_healthy}}
     command: ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
     healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/', timeout=3)"], interval: 10s, timeout: 5s, retries: 5}
@@ -24,4 +25,4 @@ services:
     ports: ["127.0.0.1:8080:8080"]
     networks: [internal]
 networks: {internal: {driver: bridge}}
-volumes: {postgres_data: {}}
+volumes: {postgres_data: {}, protected_media: {}}

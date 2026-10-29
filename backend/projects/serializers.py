@@ -202,7 +202,9 @@ class ProjectCreateSerializer(ProjectSerializer):
     )
 
     class Meta(ProjectSerializer.Meta):
-        fields = ProjectSerializer.Meta.fields + ["replace_active", "leader", "student_ids", "origin_template"]
+        fields = ProjectSerializer.Meta.fields + [
+            "replace_active", "leader", "student_ids", "origin_template"
+        ]
 
     def create(self, validated_data):
         validated_data.pop("replace_active", None)

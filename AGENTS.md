@@ -44,4 +44,4 @@ scripts/            # Scripts de iniciar/parar plataforma
 
 - `IMP` = implementado; `PLN` = planejado/não implementado.
 - UC-001 a UC-016: IMP (autenticação, salas, projetos, grupos, follow-ups, marcos, parcerias).
-- UC-017 a UC-023: PLN (Sprint 7 — Mostra, publicação e acervo).
+- UC-017 a UC-023: implementados (Sprint 7); consulte `docs/HANDOFF.md` para validação e pendências, sem presumir CI verde.

@@ -28,13 +28,12 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 
 - Banco de dados PostgreSQL 17 (Docker).
 - Armazenamento de arquivos privados (uploads validados por tipo/tamanho).
-- Geração de PDF server-side (Sprint 7, biblioteca a definir).
-- Notificações internas (Sprint 7).
+- Documentos publicáveis em PDF e notificações internas da Sprint 7 implementados.
 
 ## Persistência
 
 - Modelos de domínio: usuário, perfil de aluno/professor, curso, disciplina, turma, matrícula, sala acadêmica, projeto, grupo, membro do grupo, convite, follow-up, anexo, marco, oportunidade de parceria, candidatura, evento de auditoria.
-- Novos modelos planejados (Sprint 7): `ShowcaseEntry`, `PublicationDocument`, `Publication`.
+- Modelos da Sprint 7 implementados: `ShowcaseEntry`, `PublicationDocument`, `Publication`.
 - Chaves críticas usam `PROTECT` para preservar histórico acadêmico.
 - Registros acadêmicos e históricos não expiram automaticamente.
 - CPF não é persistido integralmente (apenas hash e últimos 4 dígitos).
@@ -49,7 +48,7 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 ## Prioridades
 
 1. Manter compatibilidade com o código existente (UC-001 a UC-016 já implementadas).
-2. Implementar Sprint 7 (UC-017 a UC-023) apenas após aceite da especificação (`docs/sprints/SPRINT_07_SPEC.md`).
+2. Manter a Sprint 7 conforme a especificação aceita (`docs/sprints/SPRINT_07_SPEC.md`).
 3. Cobertura mínima de testes: 85% (backend).
 4. Autorização no backend e por objeto; negação por padrão.
 
@@ -60,10 +59,11 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 - Não commitar credenciais, chaves ou dados pessoais sensíveis.
 - Ocultar botão não concede segurança: todo caso de uso mutável exige autorização no backend.
 - O módulo geral de eventos permanece fora do escopo; somente o encaminhamento necessário à Mostra Extensionista é contemplado.
-- Não existe código de Mostra, documento padronizado, publicação ou acervo implementado ainda (reservado para Sprint 7).
+- O acervo anônimo expõe metadados; o download do PDF exige autenticação.
+- Login usa `authenticate()` antes de criar sessão, exige CSRF e mantém bloqueio por identificador/endereço.
 - Pontos pendentes de decisão/documentação: marcado como `desconhecido` ou `pendente de confirmação` quando não verificável nos artefatos.
 
 ## Rastreabilidade (UCs)
 
 - UC-001 a UC-016: IMP (implementado).
-- UC-017 a UC-023: PLN (Sprint 7 — Mostra, publicação e acervo).
+- UC-017 a UC-023: implementados; resultados de validação e pendências em `docs/HANDOFF.md`.

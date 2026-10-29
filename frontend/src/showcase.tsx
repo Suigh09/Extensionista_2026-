@@ -356,7 +356,9 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
     try{
       await publishProject({project:project.id,document:String(data.get('document'))})
       form.reset();saved();setMessage('Projeto publicado no acervo.');await refresh()
-    }catch(e){setPublishing(null);setMessage(failure(e))}
+    }catch(e){
+      setPublishing(null);setMessage(failure(e))
+    }
   }
   async function withdraw(publicationId:string,reason:string){
     setMessage('')

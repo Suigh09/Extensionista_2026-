@@ -117,7 +117,6 @@ SESSION_SAVE_EVERY_REQUEST = True
 _CORS_DEFAULT = ["http://localhost:5173", "http://127.0.0.1:5173"]
 CORS_ALLOWED_ORIGINS = csv_env("DJANGO_CORS_ALLOWED_ORIGINS", ",".join(_CORS_DEFAULT))
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", ",".join(_CORS_DEFAULT))
 CSRF_COOKIE_HTTPONLY = SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE = "Lax"
@@ -135,7 +134,9 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "EXCEPTION_HANDLER": "core.exceptions.safe_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "DEFAULT_THROTTLE_RATES": {"login": "200/minute" if os.getenv("DJANGO_ENV") == "development" else "20/minute"},
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "200/minute" if os.getenv("DJANGO_ENV") == "development" else "20/minute"
+    },
     "PAGE_SIZE": 25,
 }
 LOGGING = {
