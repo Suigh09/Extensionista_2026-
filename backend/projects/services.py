@@ -12,6 +12,7 @@ from .models import (
     Project,
     ProjectGroup,
     ProjectMilestone,
+    ProjectTheme,
 )
 
 
@@ -357,6 +358,26 @@ def decide_collaboration_application(*, actor, application, decision):
                 assignment.save(update_fields=["project"])
         source_project.is_active = False
         source_project.save(update_fields=["is_active", "updated_at"])
+
+        # Tema automático de colaboração interdisciplinar (não selecionável pelo aluno)
+        origin_theme = target_project.theme
+        if origin_theme:
+            collab_theme, _ = ProjectTheme.objects.get_or_create(
+                room=origin_theme.room,
+                title=f"Colaboração Interdisciplinar - {origin_theme.title}",
+                defaults={
+                    "description": (
+                        f"Tema gerado automaticamente para colaboração interdisciplinar "
+                        f"com base no tema '{origin_theme.title}'."
+                    ),
+                    "is_open": True,
+                    "is_template": False,
+                    "interdisciplinary": True,
+                },
+            )
+            target_project.theme = collab_theme
+            target_project.save(update_fields=["theme", "updated_at"])
+
         opportunity.status = CollaborationOpportunity.Status.MATCHED
         opportunity.save(update_fields=["status", "updated_at"])
         CollaborationApplication.objects.filter(
