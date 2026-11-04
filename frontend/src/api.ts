@@ -156,3 +156,13 @@ export type AcervoPublicItem={id:string;project_name:string;document_version:num
 export const listAcervo=(q='')=>request<AcervoItem[]>(`/projects/acervo/?q=${encodeURIComponent(q)}`)
 export const listAcervoPublico=(q='')=>request<AcervoPublicItem[]>(`/projects/acervo-publico/?q=${encodeURIComponent(q)}`,{credentials:'omit'})
 export const publicationDocumentDownloadPublicUrl=(documentId:string)=>`${API}/projects/publication-documents/${documentId}/download/`
+
+export type BulkImportResult={
+  created:number
+  errors:number
+  success:boolean
+  users:Array<{username:string;role:string}>
+  error_details:Array<{row:number;field:string;message:string}>
+}
+export const importUsersFromCsv=(file:File)=>request<BulkImportResult>('/auth/users/import-csv/',{method:'POST',body:formDataFromFile(file)})
+function formDataFromFile(file:File){const form=new FormData();form.append('file',file);return form}
