@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
+from .bulk_import import import_users_from_csv
 from .models import LoginAttempt, Notification, User, cpf_fingerprint, normalize_digits
 from .permissions import IsInstitutionalAdmin
 from .serializers import NotificationSerializer, ProfileSerializer, UserCreateSerializer
@@ -171,3 +172,34 @@ class NotificationReadAllView(APIView):
             is_read=True, read_at=now
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserBulkImportView(APIView):
+    """Importa usuários em massa via arquivo CSV.
+
+    Requer permissão institucional (Admin/Secretaria).
+    Formato: multipart/form-data com campo 'file' contendo o CSV.
+    """
+
+    permission_classes = [IsInstitutionalAdmin]
+
+    def post(self, request):
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response(
+                {"detail": "Arquivo CSV não enviado. Use o campo 'file'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = import_users_from_csv(file_obj, actor=request.user)
+
+        return Response(
+            {
+                "created": result.success_count,
+                "errors": result.error_count,
+                "success": result.success,
+                "users": result.created,
+                "error_details": result.errors,
+            },
+            status=status.HTTP_207_MULTI_STATUS if result.errors else status.HTTP_201_CREATED,
+        )

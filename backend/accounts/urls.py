@@ -8,6 +8,7 @@ from .views import (
     NotificationReadAllView,
     NotificationReadView,
     SessionView,
+    UserBulkImportView,
     UserListCreateView,
 )
 
@@ -17,6 +18,7 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("session/", SessionView.as_view(), name="session"),
     path("users/", UserListCreateView.as_view(), name="users"),
+    path("users/import-csv/", UserBulkImportView.as_view(), name="users-import-csv"),
     path("notifications/", NotificationListView.as_view(), name="notifications"),
     path(
         "notifications/read-all/",

@@ -1,0 +1,5 @@
+username,role,first_name,last_name,email,password,ra,course_code,class_offering_code,registration
+aluno.demo01,STUDENT,Ana,Demo,ana.demo@exemplo.local,Uma-senha-segura-123,AD001,ADS,ADS-2026.2,
+aluno.demo02,STUDENT,Bruno,Demo,bruno.demo@exemplo.local,Uma-senha-segura-123,AD002,ADS,ADS-2026.2,
+prof.demo01,PROFESSOR,Carla,Demo,carlos.demo@exemplo.local,Uma-senha-segura-123,,,,P001
+sec.demo01,SECRETARIAT,Diana,Demo,diana.demo@exemplo.local,Uma-senha-segura-123,,,,,

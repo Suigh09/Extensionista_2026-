@@ -56,3 +56,26 @@
   rotacionadas com backup criptografado (DPAPI) em `.runtime/rotation-20261029-141253/`.
 - Veja `docs/HANDOFF.md` para resultados atuais; registros antigos de CI/coverage
   não são evidência de que o working tree atual está aprovado.
+
+## Produção / Implantação (pendente)
+
+- CI/CD: pipeline GitHub Actions não cobre build/testes completos. Substituir placeholder em `.github/workflows/ci.yml` por pipeline real (ruff, pytest, npm lint/test/build, E2E Playwright, pip-audit).
+- SSL/TLS: não há certificado para domínio de produção; necessário Let's Encrypt ou similar.
+- Proxy reverso: Django exposto diretamente; necessário Nginx/Traefik na frente.
+- ALLOWED_HOSTS e CORS: configurados apenas para localhost; precisam do domínio de produção.
+- SECRET_KEY: usar chave de produção, não a de desenvolvimento.
+- Senhas PostgreSQL: injetar via variáveis de ambiente, não hardcoded.
+- Migrações: aplicar `manage.py migrate --noinput` no banco de produção.
+- Backup: definir estratégia de backup do PostgreSQL.
+- Arquivos protegidos: configurar serving de `protected-media` somente para autenticados.
+- Logs/monitoramento: definir rotação de logs e sistema de observabilidade.
+- Testes de carga: executar load testing antes de produção.
+- Documentação de deploy/rollback: criar procedimento passo a passo.
+
+## Importação em massa via CSV (concluída)
+
+- Endpoint `POST /api/v1/auth/users/import-csv/` (apenas Admin/Secretaria).
+- Formato CSV: `username,role,first_name,last_name,email,password,ra,course_code,class_offering_code,registration`.
+- Validação por linha com transação atômica (rollback se houver erro).
+- Arquivo de exemplo: `backend/accounts/management/commands/example_users_import.csv`.
+- Testes: `backend/tests/test_bulk_import.py` (4 testes passando).

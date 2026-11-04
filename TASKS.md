@@ -46,6 +46,30 @@
 
 - Nenhuma.
 
+## Produção / Implantação (pendente)
+
+- [ ] CI/CD pipeline completo (`.github/workflows/ci.yml`): ruff, manage.py check, makemigrations --check, pytest backend, npm lint/test/build, Playwright E2E, pip-audit
+- [ ] Certificado SSL/TLS (Let's Encrypt ou similar) para domínio de produção
+- [ ] Proxy reverso (Nginx/Traefik) na frente do Django
+- [ ] `ALLOWED_HOSTS` com domínio de produção
+- [ ] `CORS_ALLOWED_ORIGINS` com domínio do frontend de produção
+- [ ] `DJANGO_SECRET_KEY` de produção (não a de desenvolvimento)
+- [ ] Senhas fortes do PostgreSQL injetadas via variáveis de ambiente
+- [ ] Migrações aplicadas no banco de produção (`manage.py migrate --noinput`)
+- [ ] Estratégia de backup do banco PostgreSQL
+- [ ] Configuração de serving de arquivos protegidos (`protected-media`, somente autenticados)
+- [ ] Rotação de logs e monitoramento
+- [ ] Testes de carga (load testing)
+- [ ] Documentação de procedimento de deploy e rollback
+
+## Importação em massa via CSV (concluída)
+
+- Endpoint `POST /api/v1/auth/users/import-csv/` (apenas Admin/Secretaria)
+- Formato CSV: `username,role,first_name,last_name,email,password,ra,course_code,class_offering_code,registration`
+- Validação por linha com transação atômica (nenhuma alteração se houver erro)
+- Arquivo de exemplo: `backend/accounts/management/commands/example_users_import.csv`
+- Testes: `backend/tests/test_bulk_import.py` (4 testes passando)
+
 ## Finalização GF-09/GF-10 — 29/10/2026
 
 - Login inseguro herdado corrigido: senha e usuário ativo verificados, CSRF,
