@@ -1,10 +1,11 @@
-import {useCallback,useEffect,useState} from 'react'
+import {useCallback,useEffect,useRef,useState} from 'react'
 import {listNotifications,markAllNotificationsRead,markNotificationRead,type NotificationItem} from './api'
 
 const navigate=(hash:string)=>window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
 
 export function NotificationBell(){
+  const root=useRef<HTMLDivElement>(null)
   const[items,setItems]=useState<NotificationItem[]>([]),[open,setOpen]=useState(false),[message,setMessage]=useState('')
   const unread=items.filter(item=>!item.is_read).length
   const refresh=useCallback(async()=>{
@@ -13,7 +14,7 @@ export function NotificationBell(){
   useEffect(()=>{void refresh()},[refresh])
   useEffect(()=>{
     if(!open)return
-    const close=()=>setOpen(false)
+    const close=(event:MouseEvent)=>{if(event.target instanceof Node&&!root.current?.contains(event.target))setOpen(false)}
     const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false)}
     document.addEventListener('click',close,true)
     document.addEventListener('keydown',key)
@@ -22,10 +23,11 @@ export function NotificationBell(){
   async function openItem(item:NotificationItem){
     try{
       if(!item.is_read)await markNotificationRead(item.id)
-      setOpen(false)
-      if(item.project)navigate(`#/projects/${item.project}`)
-      else await refresh()
+      setItems(current=>current.map(value=>value.id===item.id?{...value,is_read:true}:value))
     }catch(e){setMessage(failure(e))}
+    const target='target_url' in item?item.target_url:(item.project?`#/projects/${item.project}`:null)
+    if(typeof target==='string'&&target.startsWith('#/')){setOpen(false);navigate(target)}
+    else setMessage('Esta notificação não possui um destino disponível.')
   }
   async function readAll(){
     try{await markAllNotificationsRead();await refresh()}catch(e){setMessage(failure(e))}
@@ -34,7 +36,7 @@ export function NotificationBell(){
     try{await markNotificationRead(id)
     setItems(items=>items.filter(i=>i.id!==id))}catch(e){setMessage(failure(e))}
   }
-  return <div className="notification-bell" onClick={e=>e.stopPropagation()}>
+  return <div ref={root} className="notification-bell" onClick={e=>e.stopPropagation()}>
     <button type="button" className="nav-item" aria-pressed={open} aria-label={unread>0?`Notificações, ${unread} não lidas`:'Notificações'} onClick={()=>setOpen(value=>!value)}>
       <span aria-hidden="true">🔔</span>{unread>0&&<span className="badge">{unread}</span>}
     </button>

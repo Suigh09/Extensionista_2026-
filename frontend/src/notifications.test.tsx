@@ -18,6 +18,30 @@ function item(overrides:Partial<NotificationItem>={}):NotificationItem{
 }
 
 describe('sino de notificações',()=>{
+  it('usa o destino específico informado pela API',async()=>{
+    listMock.mockResolvedValue([item({target_url:'#/publication-documents/project-1'})])
+    readMock.mockResolvedValue(item({is_read:true}))
+    const listener=vi.fn()
+    window.addEventListener('platform:navigate',listener)
+    try{
+      const user=userEvent.setup();render(<NotificationBell/>)
+      await user.click(await screen.findByRole('button',{name:/Notificações/}))
+      await user.click(await screen.findByRole('button',{name:/Convite para Projeto X/}))
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({detail:'#/publication-documents/project-1'}))
+    }finally{window.removeEventListener('platform:navigate',listener)}
+  })
+  it('encaminhamento abre projeto mesmo se marcar leitura falhar',async()=>{
+    listMock.mockResolvedValue([item({kind:'PROJECT_FORWARDED',title:'Encaminhamento recebido'})])
+    readMock.mockRejectedValue(new Error('Falha de leitura'))
+    const listener=vi.fn()
+    window.addEventListener('platform:navigate',listener)
+    try{
+      const user=userEvent.setup();render(<NotificationBell/>)
+      await user.click(await screen.findByRole('button',{name:/Notificações/}))
+      await user.click(await screen.findByRole('button',{name:/Encaminhamento recebido/}))
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({detail:'#/projects/project-1'}))
+    }finally{window.removeEventListener('platform:navigate',listener)}
+  })
   it('exibe contagem de não lidas e abre o projeto ao clicar',async()=>{
     listMock.mockResolvedValue([item(),item({id:'note-2',title:'Sala atualizada',is_read:true})])
     readMock.mockResolvedValue(item({is_read:true}))

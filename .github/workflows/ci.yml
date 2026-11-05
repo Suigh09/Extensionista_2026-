@@ -1,29 +1,150 @@
 name: CI
 
-# Placeholder de integração contínua. Ainda não há código-fonte no repositório,
-# então este workflow apenas valida a estrutura básica. Substitua os passos
-# marcados com TODO assim que o stack (linguagem/framework) for definido —
-# ex.: instalar dependências, rodar lint e testes automatizados.
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+env:
+  DJANGO_ENV: development
+  DATABASE_ENGINE: sqlite
+  PYTHONUNBUFFERED: '1'
+  VITE_API_BASE_URL: 'http://127.0.0.1:8000/api/v1'
+
 jobs:
-  build:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: extensionista_ci
+          POSTGRES_USER: extensionista_ci
+          POSTGRES_PASSWORD: ci_password_123
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U extensionista_ci -d extensionista_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Rodar ruff (lint)
+        run: python -m ruff check backend
+
+      - name: Rodar manage.py check
+        run: |
+          cd backend
+          python manage.py check
+
+      - name: Verificar migrações pendentes
+        run: |
+          cd backend
+          python manage.py makemigrations --check --dry-run
+
+      - name: Rodar testes com cobertura
+        env:
+          POSTGRES_DB: extensionista_ci
+          POSTGRES_USER: extensionista_ci
+          POSTGRES_PASSWORD: ci_password_123
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+        run: |
+          cd backend
+          python -m pytest --cov --cov-report=xml
+
+      - name: Enviar cobertura ao Codecov (opcional)
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  frontend:
+    runs-on: ubuntu-latest
+    services:
+      backend:
+        image: plataforma_extensionista-backend:ci
+        ports: ["8000:8000"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependências frontend
+        run: |
+          cd frontend
+          npm ci --cache .npm-cache --prefer-offline
+
+      - name: Rodar ESLint
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Rodar testes Vitest
+        run: |
+          cd frontend
+          npm test
+
+      - name: Rodar build
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Instalar Playwright browsers
+        run: |
+          cd frontend
+          npx playwright install --with-deps
+
+      - name: Rodar testes E2E (GF-09/GF-10)
+        env:
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        run: |
+          cd frontend
+          npx playwright test e2e/showcase.spec.ts --project=desktop
+
+  backend-docker:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Sanity check da documentação
+      - name: Build imagem backend Docker
         run: |
-          test -f documentos/README.md
-          test -f LICENSE
-          echo "Estrutura básica do repositório OK."
+          docker build -t plataforma_extensionista_backend:ci ./backend
 
-      # TODO: instalar dependências do projeto (ex.: setup-node, setup-python)
-      # TODO: rodar lint
-      # TODO: rodar testes automatizados
+      - name: Rodar manage.py check no container
+        run: |
+          docker run --rm plataforma_extensionista_backend:ci python manage.py check
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Python e pip-audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+
+      - name: Auditar dependências Python
+        run: pip-audit -r requirements.txt -r requirements-dev.txt

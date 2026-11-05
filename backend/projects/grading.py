@@ -32,7 +32,7 @@ def parse_score(value):
         number = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError) as error:
         raise ValidationError("Nota inválida: use número de 0 a 10.") from error
-    if number.is_nan() or number < 0 or number > 10:
+    if not number.is_finite() or number < 0 or number > 10:
         raise ValidationError("Nota inválida: use número de 0 a 10.")
     return number.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
@@ -43,6 +43,8 @@ def group_grade_value(group):
     )
     if latest is None:
         return None, None
+    if latest.direct_value is not None:
+        return latest.direct_value, latest
     items = list(latest.items.all())
     if not items:
         return None, latest
@@ -138,7 +140,7 @@ def usable_rubrics(actor, project):
 
 
 def _evaluator_group(actor, group):
-    group = ProjectGroup.objects.select_related(
+    group = ProjectGroup.objects.select_for_update(of=("self",)).select_related(
         "project", "evaluator__user", "responsible_professor__user"
     ).get(pk=group.pk)
     if not group.is_active:
@@ -193,8 +195,8 @@ def submit_grades(*, actor, group, rubric_id, items, comment=""):
         actor,
         project,
         "GRADES_SUBMITTED",
-        "",
-        group.name or "grupo",
+        project.status,
+        project.status,
         f"Notas lançadas para {group.name or 'o grupo'}.",
     )
     return submission
@@ -218,8 +220,8 @@ def conclude_evaluation(*, actor, group):
     latest.concluded = True
     latest.save(update_fields=["concluded"])
     record_event(
-        actor, project, "EVALUATION_CONCLUDED", "", group.name or "grupo",
-        "Avaliação do grupo concluída.",
+        actor, project, "EVALUATION_CONCLUDED", project.status, project.status,
+        f"Avaliação de {group.name or 'grupo'} concluída.",
     )
     from accounts.models import Notification
     from accounts.notifications import notify
@@ -234,7 +236,45 @@ def conclude_evaluation(*, actor, group):
         "Confira suas notas e comentários.",
         project=project,
     )
+    from .publication_workflow import advisors
+
+    notify(
+        advisors(project), Notification.Kind.SHOWCASE_RESULTS,
+        f"Resultados da Mostra: {project.name}",
+        "Presenças individuais, nota do grupo e observações disponíveis para consulta. "
+        "A avaliação individual do orientador ocorre na plataforma externa.", project=project,
+    )
     return latest
+
+
+@transaction.atomic
+def submit_direct_grade(*, actor, entry, value, comment=""):
+    from .models import ShowcaseEntry
+    from .showcase import require_evaluator
+
+    group = _evaluator_group(actor, entry.group)
+    require_evaluator(actor, group)
+    project = Project.objects.select_for_update().get(pk=group.project_id)
+    require_mutable(project)
+    locked = ShowcaseEntry.objects.select_for_update().get(pk=entry.pk)
+    if (locked.status != ShowcaseEntry.Status.PRESENTED
+            or not locked.member_attendances.filter(present=True).exists()):
+        raise ValidationError("Confirme a presença dos integrantes antes de avaliar.")
+    value = parse_score(value)
+    comment = str(comment or "").strip()
+    if len(comment) > 2000:
+        raise ValidationError("Observações devem ter até 2000 caracteres.")
+    latest = group.grade_submissions.order_by("-created_at", "-id").first()
+    if latest and latest.concluded:
+        if (latest.author_id == actor.pk and latest.direct_value == value
+                and latest.comment == comment):
+            return latest
+        raise ValidationError("Avaliação já concluída.")
+    submission = GradeSubmission.objects.create(
+        group=group, author=actor, direct_value=value, comment=comment,
+    )
+    audit(actor, "DIRECT_GROUP_GRADE", submission, ["direct_value", "comment"])
+    return conclude_evaluation(actor=actor, group=group)
 
 
 @transaction.atomic

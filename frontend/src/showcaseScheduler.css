@@ -1,0 +1,34 @@
+.showcase-planning { width:100%; max-width:1200px; margin:0 auto; }
+.planning-filters { display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding:1.2rem; background:white; border:1px solid #cddce7; border-radius:12px; }
+.planning-filters label,.planning-search label { display:flex; flex-direction:column; gap:.4rem; font-weight:600; }
+.planning-filters select,.planning-search input { padding:.7rem; border:1px solid #a6bccb; border-radius:6px; width:100%; background:white; }
+.planning-search { display:flex; align-items:end; flex-wrap:wrap; gap:.6rem; margin:1.2rem 0; }
+.planning-search label { flex:1; min-width:200px; }
+.planning-columns { display:grid; grid-template-columns:minmax(240px, 1fr) minmax(360px, 1.6fr); gap:1.2rem; align-items:start; min-height:400px; }
+.planning-pool,.planning-calendar,.planning-settings,.planning-results { background:white; border:1px solid #cddce7; border-radius:12px; padding:1rem; min-width:0; }
+.planning-calendar { display:flex; flex-direction:column; min-height:400px; }
+.planning-calendar-header { position:sticky; top:1rem; background:white; z-index:2; padding-bottom:.5rem; margin-bottom:.75rem; border-bottom:1px solid #d6e2eb; }
+.planning-timeline { position:relative; margin-top:0; isolation:isolate; flex:1; overflow-y:auto; max-height:calc(100vh - 360px); }
+.planning-group { border:1px solid #bdd0df; border-left:4px solid #2273b4; padding:0.6rem; margin:0.5rem 0; border-radius:8px; cursor:grab; display:flex; flex-direction:column; gap:0.4rem; }
+.planning-group.selected { outline:2px solid #2273b4; }
+
+.planning-slot { position:absolute; left:0; right:0; border-top:1px solid #d6e2eb; display:flex; justify-content:space-between; padding-top:5px; }
+.planning-slot span { font-size:.8rem; color:#476174; width:55px; }
+.slot-action { height:28px; width:28px; border:1px solid #b2ccdf; background:#f5f9fc; border-radius:4px; }
+.planning-booking { position:absolute; left:60px; right:34px; background:#e3f0fb; border:1px solid #6da7d1; border-left:4px solid #2273b4; border-radius:6px; padding:6px 8px 17px; z-index:1; display:flex; flex-direction:column; gap:3px; overflow:auto; min-height:154px; }
+.planning-allocation { margin:1rem 0; padding:1rem; border:1px solid #bdd0df; background:#edf5fc; border-radius:10px; }
+.booking-evaluator { text-align:left; background:transparent; border:0; color:#134b77; padding:0; font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; text-decoration:underline; }
+.booking-evaluator:focus-visible { outline:2px solid #134b77; outline-offset:2px; }
+.planning-booking strong { font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.planning-booking>span { font-size:.75rem; }
+.booking-actions { display:flex; gap:4px; flex-wrap:wrap; }
+.booking-actions button { font-size:.7rem; padding:2px 5px; background:white; border:1px solid #94b6ce; border-radius:4px; cursor:pointer; }
+.booking-resize { position:absolute; bottom:0; left:0; width:100%; height:15px; border:0; border-top:1px solid #96bddb; background:#bddbf1; cursor:ns-resize; touch-action:none; line-height:10px; }
+.planning-settings { margin-top:1rem; }
+.planning-settings summary { cursor:pointer; font-weight:600; padding:.4rem; }
+.planning-venue { padding:1rem 0; border-bottom:1px solid #d6e2eb; }
+.planning-results { margin-bottom:1rem; }
+.planning-results article { padding:.8rem 0; border-top:1px solid #d6e2eb; }
+.planning-results article>span { display:block; }
+@media(min-width:1100px) { .content:has(.showcase-planning) { max-width:1400px; width:100%; padding:clamp(16px,3vw,40px); box-sizing:border-box; } }
+@media(max-width:760px) { .planning-filters,.planning-columns { grid-template-columns:1fr; } .planning-calendar { overflow-x:auto; } .planning-timeline { min-width:360px; } .planning-pool { max-height:400px; overflow:auto; } }

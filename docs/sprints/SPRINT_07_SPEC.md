@@ -2,6 +2,19 @@
 
 Especificação aceita. Implementação autorizada.
 
+## Adendo aceito no chat — 05/11/2026
+
+O usuário autorizou explicitamente implementar o contrato consolidado em
+`docs/ACERVO_END_TO_END_VALIDATION.md`, que substitui Q2 e o fluxo documental
+original abaixo: presença individual + nota DO GRUPO; resultados ao orientador
+para registro (avaliação individual externa); somente líder envia/valida;
+orientador aprova ou edita em nova versão para aceite do líder; Secretaria/Admin
+confirma publicação final. PDF server-side e histórico visível por versão.
+Não há publicação direta por aluno/orientador. Implementado e validado; guia e
+resultados atuais em `docs/ACERVO_WORKFLOW_GUIDE.md` e `docs/HANDOFF.md`.
+
+As seções seguintes preservam a especificação original para rastreabilidade.
+
 ## 1. Contexto (confirmado)
 
 - O encaminhamento à Mostra pertence ao módulo Controle (não é módulo geral de

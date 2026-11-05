@@ -4,21 +4,23 @@ import{usePageMotion}from'./motion'
 import{ThemeProjectCreate,ThemeManagement,LifecyclePanel,ProfessorGroupAssignment,InstitutionalProjects}from'./projectLifecycle'
 import{DeliveriesPanel,ForwardedQueue}from'./deliveries'
 import{EvaluatorDesignation}from'./evaluation'
-import{GroupEvaluationPanel,IndividualGradesPanel,RubricManagement}from'./grading'
+import{GroupEvaluationPanel,IndividualGradesPanel}from'./grading'
 import{NotificationBell}from'./notifications'
-import{ShowcasePanel,ShowcasePresencePanel,PublicationDocumentPanel,PublicationPanel,PublicationFormPanel,AcervoPanel,PublicAcervoPanel,EvaluationsPage,IndividualGradesPage}from'./showcase'
+import{ShowcasePresencePanel,AcervoPanel,PublicAcervoPanel,EvaluationsPage,IndividualGradesPage}from'./showcase'
+import{AcervoWorkflowPage}from'./acervoWorkflow'
 import{UserBulkImport}from'./userBulkImport'
+import{ShowcaseScheduler}from'./showcaseScheduler'
 
 const HomeVisual=lazy(()=>import('./experience'))
 
 const labels:Record<Role,string>={STUDENT:'Aluno',PROFESSOR:'Professor',SECRETARIAT:'Secretaria',ADMIN:'Administrador'}
 const groupLabels={FORMING:'Em formação',FORMED:'Grupo formado',COMPLETE:'Grupo completo'}
 const projectStatusLabels:Record<ProjectStatus,string>={DRAFT:'Rascunho',PENDING_APPROVAL:'Aguardando aprovação',CHANGES_REQUESTED:'Ajustes solicitados',APPROVED:'Aprovado',COMPLETED:'Concluído',ARCHIVED:'Arquivado',PAUSED:'Pausado',CANCELLED:'Cancelado'}
-type Page='home'|'projects'|'project-create'|'project'|'collaborations'|'rooms'|'evaluations'|'evaluator-designation'|'group-evaluation'|'individual-grades'|'archive'|'acervo-publico'|'admin'|'profile'|'showcase'|'showcase-presence'|'publication-documents'|'publication-form'|'publication'|'user-import'
-const pageTitles:Record<Page,string>={home:'Início',projects:'Projetos','project-create':'Criar projeto',project:'Projeto',collaborations:'Colaborações Acadêmicas',rooms:'Salas',evaluations:'Avaliações','evaluator-designation':'Designar avaliador','group-evaluation':'Avaliação de grupo','individual-grades':'Notas individuais',archive:'Acervo','acervo-publico':'Acervo público',admin:'Administração',profile:'Meu perfil',showcase:'Agenda da Mostra','showcase-presence':'Registro de presença','publication-documents':'Documento publicável','publication-form':'Formulário do documento',publication:'Publicação no acervo','user-import':'Importar usuários'}
+type Page='home'|'projects'|'project-create'|'project'|'collaborations'|'rooms'|'evaluations'|'evaluator-designation'|'group-evaluation'|'individual-grades'|'archive'|'acervo-publico'|'admin'|'profile'|'showcase'|'showcase-presence'|'publication-documents'|'publication-form'|'publication'|'user-import'|'showcase-schedule'
+const pageTitles:Record<Page,string>={home:'Início',projects:'Projetos','project-create':'Criar projeto',project:'Projeto',collaborations:'Colaborações Acadêmicas',rooms:'Salas',evaluations:'Avaliações','evaluator-designation':'Designar avaliador','group-evaluation':'Avaliação de grupo','individual-grades':'Notas individuais',archive:'Acervo','acervo-publico':'Acervo público',admin:'Administração',profile:'Meu perfil',showcase:'Agenda da Mostra','showcase-presence':'Registro de presença','publication-documents':'Documento publicável','publication-form':'Formulário do documento',publication:'Publicação no acervo','user-import':'Importar usuários','showcase-schedule':'Agendamento da Mostra'}
 const allowedPages=new Set<Page>(Object.keys(pageTitles) as Page[])
-function pageFromHash():Page{const value=window.location.hash.replace('#/','');if(value==='projects/new')return'project-create';if(value.startsWith('projects/'))return'project';if(value.startsWith('publication-documents/'))return'publication-documents';if(value.startsWith('publication-form/'))return'publication-form';if(value.startsWith('publication/')&&!value.startsWith('publication-documents/'))return'publication';return allowedPages.has(value as Page)?value as Page:'home'}
-function projectIdFromHash(){const page=pageFromHash();if(page==='project'||page==='publication-documents'||page==='publication-form'||page==='publication'||page==='group-evaluation'){const match=window.location.hash.match(/#\/(?:projects?|publication(?:-documents|-form)?)\/([^/?#]+)/);return match?match[1]:''}return ''}
+function pageFromHash(hash=window.location.hash):Page{const value=hash.replace('#/','');if(value==='projects/new')return'project-create';if(value.startsWith('projects/'))return'project';if(value.startsWith('group-evaluation/'))return'group-evaluation';if(value.startsWith('publication-documents/'))return'publication-documents';if(value.startsWith('publication-form/'))return'publication-form';if(value.startsWith('publication/')&&!value.startsWith('publication-documents/'))return'publication';return allowedPages.has(value as Page)?value as Page:'home'}
+function projectIdFromHash(){const page=pageFromHash();if(page==='project'||page==='publication-documents'||page==='publication-form'||page==='publication'||page==='group-evaluation'){const match=window.location.hash.match(/#\/(?:projects?|group-evaluation|publication(?:-documents|-form)?)\/([^/?#]+)/);return match?match[1]:''}return ''}
 function navigateTo(hash:string){window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))}
 function markChangesSaved(){window.dispatchEvent(new Event('platform:changes-saved'))}
 
@@ -40,12 +42,14 @@ function useAccessibleDialogs(){
 
 export default function App(){
   const[user,setUser]=useState<Profile|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
+  const[route,setRoute]=useState(window.location.hash)
+  useEffect(()=>{const changed=()=>setRoute(window.location.hash);window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed)},[])
   useEffect(()=>{getSession().then(setUser).catch(()=>setUser(null)).finally(()=>setLoading(false))},[])
   async function onLogin(event:FormEvent<HTMLFormElement>){event.preventDefault();setError('');const data=new FormData(event.currentTarget);try{setUser(await login(String(data.get('identifier')),String(data.get('password'))))}catch(reason){setError(reason instanceof Error?reason.message:'Falha no acesso')}}
   async function onLogout(){await logout();setUser(null)}
   if(loading)return <main id="conteudo" tabIndex={-1} className="center" aria-live="polite">Carregando sessão…</main>
   if(!user){
-    const hashPage=window.location.hash.replace('#/','')
+    const hashPage=route.replace('#/','')
     if(hashPage==='acervo-publico')return <PublicAcervoPanel/>
     return <LoginForm onSubmit={onLogin} error={error}/>
   }
@@ -58,23 +62,57 @@ function LoginForm({onSubmit,error}:{onSubmit:(event:FormEvent<HTMLFormElement>)
 }
 
 function Dashboard({user,onLogout}:{user:Profile;onLogout:()=>Promise<void>}){
-  const[page,setPage]=useState<Page>(pageFromHash),[,setDirty]=useState(false),[pendingHash,setPendingHash]=useState<string|null>(null)
+  const[route,setRoute]=useState(window.location.hash),[pendingHash,setPendingHash]=useState<string|null>(null)
+  const page=pageFromHash(route)
   const lastHash=useRef(window.location.hash)
   const dirtyRef=useRef(false)
   usePageMotion(page)
   useAccessibleDialogs()
-  useEffect(()=>{const changed=(event:Event)=>{const target=event.target as HTMLElement;if(target.closest('form')){dirtyRef.current=true;setDirty(true)}},saved=()=>{dirtyRef.current=false;setDirty(false)},requested=(event:Event)=>{const target=(event as CustomEvent<string>).detail;if(dirtyRef.current)setPendingHash(target);else window.location.hash=target},hashChanged=()=>{const target=window.location.hash;if(dirtyRef.current&&target!==lastHash.current){window.history.replaceState({},'',lastHash.current||window.location.pathname);setPendingHash(target);return}lastHash.current=target;setPage(pageFromHash())},before=(event:BeforeUnloadEvent)=>{if(dirtyRef.current){event.preventDefault();event.returnValue=''}};document.addEventListener('input',changed,true);document.addEventListener('change',changed,true);window.addEventListener('platform:changes-saved',saved);window.addEventListener('platform:navigate',requested);window.addEventListener('hashchange',hashChanged);window.addEventListener('beforeunload',before);return()=>{document.removeEventListener('input',changed,true);document.removeEventListener('change',changed,true);window.removeEventListener('platform:changes-saved',saved);window.removeEventListener('platform:navigate',requested);window.removeEventListener('hashchange',hashChanged);window.removeEventListener('beforeunload',before)}},[])
+  useEffect(()=>{const changed=(event:Event)=>{const target=event.target as HTMLElement;if(target.closest('form:not([data-filter-form])'))dirtyRef.current=true},saved=()=>{dirtyRef.current=false},requested=(event:Event)=>{const target=(event as CustomEvent<string>).detail;if(dirtyRef.current)setPendingHash(target);else window.location.hash=target},hashChanged=()=>{const target=window.location.hash;if(dirtyRef.current&&target!==lastHash.current){window.history.replaceState({},'',lastHash.current||window.location.pathname);setPendingHash(target);return}lastHash.current=target;setRoute(target)},before=(event:BeforeUnloadEvent)=>{if(dirtyRef.current){event.preventDefault();event.returnValue=''}};document.addEventListener('input',changed,true);document.addEventListener('change',changed,true);window.addEventListener('platform:changes-saved',saved);window.addEventListener('platform:navigate',requested);window.addEventListener('hashchange',hashChanged);window.addEventListener('beforeunload',before);return()=>{document.removeEventListener('input',changed,true);document.removeEventListener('change',changed,true);window.removeEventListener('platform:changes-saved',saved);window.removeEventListener('platform:navigate',requested);window.removeEventListener('hashchange',hashChanged);window.removeEventListener('beforeunload',before)}},[])
   const navigation:[Page,string][]=[['home','Início'],['projects','Projetos']];
-  if(user.role==='STUDENT')navigation.push(['collaborations','Colaborações Acadêmicas'],['publication-documents','Documento publicável'],['publication-form','Formulário do documento']);
+  if(user.role==='STUDENT')navigation.push(['collaborations','Colaborações Acadêmicas']);
+  navigation.push(['publication','Publicação no acervo']);
   if(user.role==='PROFESSOR')navigation.push(['rooms','Salas'],['evaluations','Avaliações'],['showcase-presence','Registro de presença']);
-  if(user.role==='SECRETARIAT')navigation.push(['showcase','Agenda da Mostra'],['evaluator-designation','Designar avaliador']);
+  if(user.role==='SECRETARIAT'||user.role==='ADMIN')navigation.push(['showcase','Agenda da Mostra']);
   navigation.push(['archive','Acervo']);
   if(user.role==='ADMIN'||user.role==='SECRETARIAT')navigation.push(['admin','Administração'],['user-import','Importar usuários']);
   navigation.push(['profile','Meu perfil']);
   function navigate(target:Page){navigateTo(`#/${target}`)}
   async function leave(){if(dirtyRef.current){setPendingHash('__logout__');return}window.location.hash='';await onLogout()}
-  async function discard(){const target=pendingHash;dirtyRef.current=false;setDirty(false);setPendingHash(null);if(target==='__logout__'){window.location.hash='';await onLogout()}else if(target){lastHash.current=target;window.location.hash=target;setPage(pageFromHash())}}
-  return <div className="authenticated-shell"><aside className="sidebar" aria-label="Navegação principal"><div className="sidebar-brand"><div className="brand-mark">E</div><div><strong>Plataforma Extensionista</strong><span>Ambiente institucional</span></div></div><div className="sidebar-account"><span>{user.name||user.username}</span><small>{labels[user.role]}</small><NotificationBell/></div><nav>{navigation.map(([target,label])=><button key={target} className={page===target||((page==='project'||page==='project-create')&&target==='projects')?'nav-item active':'nav-item'} aria-current={page===target?'page':undefined} onClick={()=>navigate(target)}>{label}</button>)}</nav><button className="nav-item sidebar-logout" onClick={()=>void leave()}>Sair</button></aside><div className="workspace"><header className="mobile-topbar"><div className="brand-mark">E</div><strong>{pageTitles[page]}</strong><NotificationBell/><button className="button secondary" onClick={()=>void leave()}>Sair</button></header><main id="conteudo" className="content page-content"><PageHeader page={page}/>{page==='home'&&<HomePage user={user} onNavigate={navigate}/>} {page==='projects'&&<ProjectsPage user={user}/>} {page==='project-create'&&<ProjectCreatePage user={user}/>} {page==='project'&&<ProjectDetailPage projectId={projectIdFromHash()} user={user}/>} {page==='collaborations'&&<CommunityPage/>} {page==='rooms'&&user.role==='PROFESSOR'&&<RoomsPage/>} {page==='evaluations'&&<EvaluationsPage user={user}/>} {page==='evaluator-designation'&&projectIdFromHash()&&<EvaluatorDesignation projectId={projectIdFromHash()}/>} {page==='group-evaluation'&&projectIdFromHash()&&<ProjectDetailPage projectId={projectIdFromHash()} user={user}/>} {page==='individual-grades'&&<IndividualGradesPage user={user}/>} {page==='archive'&&<AcervoPanel/>} {page==='acervo-publico'&&<PublicAcervoPanel/>} {page==='showcase'&&<ShowcasePanel user={user}/>} {page==='showcase-presence'&&<ShowcasePresencePanel user={user}/>} {page==='user-import'&&<UserBulkImport user={user}/>} {page==='publication-documents'&&projectIdFromHash()&&<PublicationDocumentPage key={projectIdFromHash()} user={user}/>} {page==='publication-form'&&projectIdFromHash()&&<PublicationFormPage key={projectIdFromHash()} user={user}/>} {page==='publication'&&projectIdFromHash()&&<PublicationPage key={projectIdFromHash()} user={user}/>} {page==='admin'&&(user.role==='ADMIN'?<UserManagement/>:<SecretariatTransfers/>)} {page==='profile'&&<ProfilePage user={user}/>}</main><MobileNavigation primary={navigation.slice(0,4)} secondary={navigation.slice(4)} page={page} onNavigate={navigate}/></div>{pendingHash&&<div className="modal-backdrop" role="presentation"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="discard-title"><h2 id="discard-title">Descartar alterações?</h2><p>Você possui alterações não salvas. Se continuar, o conteúdo digitado será perdido.</p><div className="action-row"><button className="button danger" onClick={()=>void discard()}>Descartar alterações</button><button className="button secondary" autoFocus onClick={()=>setPendingHash(null)}>Cancelar</button></div></section></div>}</div>
+  async function discard(){const target=pendingHash;dirtyRef.current=false;setPendingHash(null);if(target==='__logout__'){window.location.hash='';await onLogout()}else if(target){lastHash.current=target;window.location.hash=target;setRoute(target)}}
+  return <div className="authenticated-shell">
+    <aside className="sidebar" aria-label="Navegação principal">
+      <div className="sidebar-brand"><div className="brand-mark">E</div><div><strong>Plataforma Extensionista</strong><span>Ambiente institucional</span></div></div>
+      <div className="sidebar-account"><span>{user.name||user.username}</span><small>{labels[user.role]}</small><NotificationBell/></div>
+      <nav>{navigation.map(([target,label])=><button key={target} className={page===target||((page==='project'||page==='project-create')&&target==='projects')?'nav-item active':'nav-item'} aria-current={page===target?'page':undefined} onClick={()=>navigate(target)}>{label}</button>)}</nav>
+      <button className="nav-item sidebar-logout" onClick={()=>void leave()}>Sair</button>
+    </aside>
+    <div className="workspace">
+      <header className="mobile-topbar"><div className="brand-mark">E</div><strong>{pageTitles[page]}</strong><NotificationBell/><button className="button secondary" onClick={()=>void leave()}>Sair</button></header>
+      <main id="conteudo" className="content page-content"><PageHeader page={page}/>
+        {page==='home'&&<HomePage user={user} onNavigate={navigate}/>}
+        {page==='projects'&&<ProjectsPage user={user}/>}
+        {page==='project-create'&&<ProjectCreatePage user={user}/>}
+        {page==='project'&&<ProjectDetailPage key={projectIdFromHash()} projectId={projectIdFromHash()} user={user}/>}
+        {page==='collaborations'&&<CommunityPage/>}
+        {page==='rooms'&&user.role==='PROFESSOR'&&<RoomsPage/>}
+        {page==='evaluations'&&<EvaluationsPage user={user}/>}
+        {page==='evaluator-designation'&&projectIdFromHash()&&<EvaluatorDesignation projectId={projectIdFromHash()}/>}
+        {page==='group-evaluation'&&<ShowcasePresencePanel key={projectIdFromHash()} projectId={projectIdFromHash()} user={user}/>}
+        {page==='individual-grades'&&<IndividualGradesPage user={user}/>}
+        {page==='archive'&&<AcervoPanel/>}
+        {page==='acervo-publico'&&<PublicAcervoPanel/>}
+        {(page==='showcase'||page==='showcase-schedule')&&<ShowcaseScheduler user={user}/>}
+        {page==='showcase-presence'&&<ShowcasePresencePanel user={user}/>}
+        {page==='user-import'&&<UserBulkImport user={user}/>}
+         {(page==='publication-documents'||page==='publication-form'||page==='publication')&&<AcervoWorkflowPage key={projectIdFromHash()} projectId={projectIdFromHash()}/>}
+        {page==='admin'&&(user.role==='ADMIN'?<UserManagement/>:<SecretariatTransfers/>)}
+        {page==='profile'&&<ProfilePage user={user}/>}
+      </main>
+      <MobileNavigation primary={navigation.slice(0,4)} secondary={navigation.slice(4)} page={page} onNavigate={navigate}/>
+    </div>
+    {pendingHash&&<div className="modal-backdrop" role="presentation"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="discard-title"><h2 id="discard-title">Descartar alterações?</h2><p>Você possui alterações não salvas. Se continuar, o conteúdo digitado será perdido.</p><div className="action-row"><button className="button danger" onClick={()=>void discard()}>Descartar alterações</button><button className="button secondary" autoFocus onClick={()=>setPendingHash(null)}>Cancelar</button></div></section></div>}
+  </div>
 }
 
 function PageHeader({page}:{page:Page}){const heading=useRef<HTMLHeadingElement>(null);useEffect(()=>{heading.current?.focus()},[page]);return <div className="page-heading"><div><span className="eyebrow">Área autenticada</span><h1 ref={heading} tabIndex={-1}>{pageTitles[page]}</h1></div></div>}
@@ -87,7 +125,7 @@ function HomePage({user,onNavigate}:{user:Profile;onNavigate:(page:Page)=>void})
 
 function ProjectsPage({user}:{user:Profile}){if(user.role==='STUDENT')return <ProjectsPanel user={user}/>;if(user.role==='PROFESSOR')return <><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button><ThemeManagement/><ProfessorProjectOverview/></>;return <><ForwardedQueue/><InstitutionalProjects/></>}
 
-function ProfilePage({user}:{user:Profile}){return <>{user.role==='STUDENT'&&<StudentRoomCard room={user.profile?.active_room}/>}<ProfileCore user={user}/>{user.role==='PROFESSOR'&&<ProfessorExpertise/>}{user.role==='PROFESSOR'&&<RubricManagement/>}</>}
+function ProfilePage({user}:{user:Profile}){return <>{user.role==='STUDENT'&&<StudentRoomCard room={user.profile?.active_room}/>}<ProfileCore user={user}/>{user.role==='PROFESSOR'&&<ProfessorExpertise/>}</>}
 
 function ProfileCore({user}:{user:Profile}){
   const profile=user.profile
@@ -155,7 +193,7 @@ function ProjectsPanel({user}:{user:Profile}){
 }
 
 function ProjectCard({project}:{project:Project}){
-  return <article className="project-card"><div className="project-title"><div><h3>{project.name}</h3><p>{project.about}</p></div><span className="badge neutral">{projectStatusLabels[project.status]}</span></div><p><strong>Grupo:</strong> {groupLabels[project.group.formation_status]}</p><button className="button" onClick={()=>{window.location.hash=`#/projects/${project.id}`}}>Abrir página do projeto</button></article>
+  return <article className="project-card"><div className="project-title"><div>{'number' in project&&<span className="eyebrow">Projeto #{String(project.number)}</span>}<h3>{project.name}</h3><p>{project.about}</p></div><span className="badge neutral">{projectStatusLabels[project.status]}</span></div><p><strong>Grupo:</strong> {groupLabels[project.group.formation_status]}</p><button className="button" onClick={()=>{window.location.hash=`#/projects/${project.id}`}}>Abrir página do projeto</button></article>
 }
 
 function ProjectGroupPanel({project,onChanged}:{project:Project;onChanged:()=>Promise<void>}){
@@ -180,31 +218,10 @@ function ProjectDetailPage({projectId,user}:{projectId:string;user:Profile}){
   const editable=['DRAFT','CHANGES_REQUESTED'].includes(project.status),groupReady=project.group.member_count>=2
   return <section className="project-detail-layout"><article className="project-main"><button className="back-link" onClick={()=>{window.location.hash='#/projects'}}>← Voltar aos projetos</button><span className="badge neutral">{projectStatusLabels[project.status]}</span><h2>{project.name}</h2><section><h3>Sobre o projeto</h3><p className="scope-copy">{project.about}</p></section>{project.review_feedback&&<div className="review-feedback"><strong>Retorno do orientador</strong><p>{project.review_feedback}</p></div>}{(user.role==='STUDENT'||project.can_manage)&&editable&&<><details className="project-edit"><summary>Editar proposta</summary><form className="project-form compact" onSubmit={edit}><label>Título do projeto<input name="name" defaultValue={project.name} maxLength={200} required/></label><label>Sobre o projeto<textarea name="about" defaultValue={project.about} rows={7} maxLength={5000} required/></label><button className="button secondary" type="submit">Salvar alterações</button></form></details>{user.role==='STUDENT'&&groupReady?<button className="button" onClick={()=>void submit()}>Enviar projeto para aprovação</button>:<div className="group-guidance" role="status"><strong>Forme seu grupo antes de enviar</strong><span>Convide pelo menos mais um aluno na área de participantes desta página.</span></div>}</>}{user.role==='PROFESSOR'&&project.can_manage!==false&&project.status==='PENDING_APPROVAL'&&<form className="review-form" onSubmit={review}><h3>Avaliar proposta</h3><label>Comentário ou ajustes<textarea name="feedback" rows={4} maxLength={2000}/></label><div className="action-row"><button className="button" name="decision" value="approve">Aprovar projeto</button><button className="button secondary" name="decision" value="changes">Solicitar ajustes</button></div></form>}{message&&<p role="status" className="alert">{message}</p>}<LifecyclePanel project={project} user={user} onChanged={setProject}/>{!['DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED'].includes(project.status)&&<DeliveriesPanel project={project} user={user}/>}{(user.role==='ADMIN'||user.role==='SECRETARIAT')&&<EvaluatorDesignation projectId={project.id}/>}{user.role==='PROFESSOR'&&!['DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED'].includes(project.status)&&(project.groups??[]).filter(g=>g).map(group=><GroupEvaluationPanel key={group.id} project={project} group={group}/>)}{
   user.role==='PROFESSOR'&&project.can_manage&&!['DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED'].includes(project.status)&&(project.groups??[]).filter(g=>g).map(group=><IndividualGradesPanel key={group.id} group={group}/>)
-}{(project.status==='APPROVED'||(project.status==='PAUSED'&&project.previous_status==='APPROVED')||['CANCELLED','COMPLETED','ARCHIVED'].includes(project.status))?<ProjectTracking projectId={project.id} readOnly={['CANCELLED','COMPLETED','ARCHIVED'].includes(project.status)}/>:<p className="empty-state compact">O acompanhamento será liberado após a aprovação do orientador.</p>}</article><aside className="project-people" aria-label="Pessoas do projeto"><h3>Responsáveis e participantes</h3><dl><div><dt>Criador do projeto</dt><dd>{project.created_by_name||'Não informado'}</dd></div><div><dt>Professor orientador</dt><dd>{project.group.responsible_professor_name||'Não designado'}</dd></div><div><dt>Professor avaliador</dt><dd>{project.group.evaluator_name||'Não designado'}</dd></div></dl><h4>Grupo · {project.group.member_count}/4</h4><ul className="member-list">{project.group.members.map(member=><li key={member.user_id}><strong>{member.name}{project.group.leader_user_id===member.user_id?' · Líder':''}</strong><span>{member.ra}</span></li>)}</ul>{user.role==='STUDENT'&&editable&&(!project.group.leader_user_id||project.group.leader_user_id===user.id)&&<ProjectGroupPanel project={project} onChanged={reload}/>} {user.role!=='STUDENT'&&project.can_manage&&editable&&<ProfessorGroupAssignment project={project} onChanged={reload}/>}</aside></section>
-}
-
-function PublicationDocumentPage({user}:{user:Profile}){
-  const projectId=projectIdFromHash()
-  const[project,setProject]=useState<Project|null>(null),[message,setMessage]=useState('')
-  useEffect(()=>{let active=true;getProject(projectId).then(value=>{if(active)setProject(value)}).catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projeto')});return()=>{active=false}},[projectId])
-  if(!project)return <p>{message||'Carregando projeto…'}</p>
-  return <PublicationDocumentPanel project={project} user={user}/>
-}
-
-function PublicationFormPage({user}:{user:Profile}){
-  const projectId=projectIdFromHash()
-  const[project,setProject]=useState<Project|null>(null),[message,setMessage]=useState('')
-  useEffect(()=>{let active=true;getProject(projectId).then(value=>{if(active)setProject(value)}).catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projeto')});return()=>{active=false}},[projectId])
-  if(!project)return <p>{message||'Carregando projeto…'}</p>
-  return <PublicationFormPanel project={project} user={user}/>
-}
-
-function PublicationPage({user}:{user:Profile}){
-  const projectId=projectIdFromHash()
-  const[project,setProject]=useState<Project|null>(null),[message,setMessage]=useState('')
-  useEffect(()=>{let active=true;getProject(projectId).then(value=>{if(active)setProject(value)}).catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projeto')});return()=>{active=false}},[projectId])
-  if(!project)return <p>{message||'Carregando projeto…'}</p>
-  return <PublicationPanel project={project} user={user}/>
+}{(project.status==='APPROVED'||(project.status==='PAUSED'&&project.previous_status==='APPROVED')||['CANCELLED','COMPLETED','ARCHIVED'].includes(project.status))?<ProjectTracking projectId={project.id} readOnly={['CANCELLED','COMPLETED','ARCHIVED'].includes(project.status)}/>:<p className="empty-state compact">O acompanhamento será liberado após a aprovação do orientador.</p>}</article>
+  <aside className="project-people" aria-label="Pessoas do projeto">
+    {'number' in project&&<p className="badge neutral">Projeto #{String(project.number)}</p>}
+    <h3>Responsáveis e participantes</h3><dl><div><dt>Criador do projeto</dt><dd>{project.created_by_name||'Não informado'}</dd></div><div><dt>Professor orientador</dt><dd>{project.group.responsible_professor_name||'Não designado'}</dd></div><div><dt>Professor avaliador</dt><dd>{project.group.evaluator_name||'Não designado'}</dd></div></dl><h4>Grupo · {project.group.member_count}/4</h4><ul className="member-list">{project.group.members.map(member=><li key={member.user_id}><strong>{member.name}{project.group.leader_user_id===member.user_id?' · Líder':''}</strong><span>{member.ra}</span></li>)}</ul>{user.role==='STUDENT'&&editable&&(!project.group.leader_user_id||project.group.leader_user_id===user.id)&&<ProjectGroupPanel project={project} onChanged={reload}/>} {user.role!=='STUDENT'&&project.can_manage&&editable&&<ProfessorGroupAssignment project={project} onChanged={reload}/>}</aside></section>
 }
 
 function RichTextEditor(){

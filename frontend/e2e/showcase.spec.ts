@@ -109,19 +109,16 @@ test('GF-09: publicacao anonima no acervo',async({page,browser,baseURL})=>{
   const projectId=await prepareApprovedProject(request,projectName)
   const documentId=await preparePublication(request,projectId,true)
   // page.request compartilha os cookies do contexto do navegador.
-  await apiLogin(request,ALUNO.identifier,ALUNO.password)
-  await page.goto(`/#/publication/${projectId}`)
-  await expect(page.getByRole('heading',{name:'Publicação do projeto'})).toBeVisible()
-  await page.locator('summary').filter({hasText:'Publicar no acervo'}).click()
-  await expect(page.getByLabel('Documento publicável')).toBeVisible()
-  await expect(page.getByLabel('Documento publicável').locator(`option[value="${documentId}"]`)).toHaveCount(1)
-  await page.getByLabel('Documento publicável').selectOption(documentId)
-  const [published]=await Promise.all([
-    page.waitForResponse(response=>new URL(response.url()).pathname==='/api/v1/projects/publications/'&&response.request().method()==='POST'),
-    page.getByRole('button',{name:'Publicar',exact:true}).click()
-  ])
-  expect(published.status()).toBe(201)
-  await expect(page.getByText('Projeto publicado no acervo.')).toBeVisible()
+   await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+   await page.goto(`/#/publication/${projectId}`)
+   await expect(page.getByText('Aguardando confirmação da Secretaria',{exact:true})).toBeVisible()
+   page.once('dialog',dialog=>dialog.accept())
+   const [published]=await Promise.all([
+     page.waitForResponse(response=>new URL(response.url()).pathname===`/api/v1/projects/${projectId}/publication-workflow/`&&response.request().method()==='POST'),
+     page.getByRole('button',{name:'Confirmar publicação no acervo',exact:true}).click()
+   ])
+   expect(published.status()).toBe(200)
+   await expect(page.getByText('Publicação confirmada pela Secretaria.')).toBeVisible()
   const downloadPath=`${API}/projects/publication-documents/${documentId}/download/`
   const document=await request.get(downloadPath)
   await expect(document).toBeOK()
@@ -170,11 +167,9 @@ async function preparePublication(request:APIRequestContext,projectId:string,app
   const pdf={name:'acervo-e2e.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\nDocumento sintético E2E\n%%EOF')}
   await apiLogin(request,ALUNO.identifier,PASSWORD)
   const delivery=await json(await request.post(`${API}/projects/${projectId}/deliveries/`,{headers:{'X-CSRFToken':await csrf(request)},multipart:{document:pdf}}))
-  const document=await json(await request.post(`${API}/projects/${projectId}/publication-documents/`,{headers:{'X-CSRFToken':await csrf(request)},multipart:{pdf,consent_given:'true'}}))
   await apiLogin(request,ORIENTADOR.identifier,PASSWORD)
   await post(request,`deliveries/${delivery.id}/review/`,{decision:'APPROVED',feedback:'Entrega E2E validada'})
   await post(request,`${projectId}/forward/`,{required_competencies:'Extensão',observations:'Encaminhamento E2E'})
-  if(approve)await post(request,`publication-documents/${document.id}/review/`,{status:'APPROVED',review:'Documento E2E validado'})
   await apiLogin(request,SECRETARIAT.identifier,PASSWORD)
   const project=await json(await request.get(`${API}/projects/${projectId}/`))
   const recommendations=await json(await request.get(`${API}/projects/${projectId}/evaluator-recommendations/`))
@@ -184,6 +179,14 @@ async function preparePublication(request:APIRequestContext,projectId:string,app
   await post(request,`groups/${group}/designate-evaluator/`,{professor:evaluator.professor_profile_id,justification:'Avaliador sintético dedicado ao E2E'})
   const entry=await post(request,'showcase/',{group,date:new Date(Date.now()+86400000).toISOString(),location:'Auditório E2E'})
   await apiLogin(request,'avaliador.e2e.acervo',PASSWORD)
-  await post(request,`showcase/${entry.id}/`,{status:'PRESENTED',notes:'Apresentação E2E'})
+  await json(await request.post(`${API}/projects/showcase/${entry.id}/member-attendance/`,{headers:{'X-CSRFToken':await csrf(request)},data:entry.members.map((member:{member_id:number})=>({member_id:member.member_id,present:true}))}))
+  await post(request,`showcase/${entry.id}/evaluation/`,{value:'8.75',observations:'Apresentação E2E'})
+  await apiLogin(request,ALUNO.identifier,PASSWORD)
+  const flow=await post(request,`${projectId}/publication-workflow/`,{action:'submit',expected_document:null,title:project.name,abstract:'Resumo E2E',content:'Documento gerado pelo formulário E2E.',consent:true})
+  const document=flow.versions[0]
+  if(approve){
+    await apiLogin(request,ORIENTADOR.identifier,PASSWORD)
+    await post(request,`${projectId}/publication-workflow/`,{action:'approve',expected_document:document.id})
+  }
   return document.id as string
 }

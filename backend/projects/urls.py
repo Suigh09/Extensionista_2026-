@@ -7,7 +7,12 @@ from .delivery_views import (
     ForwardedQueueView,
     ForwardingView,
 )
-from .evaluation_views import DesignateView, RecommendationView
+from .evaluation_views import (
+    AutoEvaluatorAllocationView,
+    DesignateView,
+    GroupEvaluatorOptionsView,
+    RecommendationView,
+)
 from .grading_views import (
     ConcludeView,
     CriterionDetailView,
@@ -25,8 +30,11 @@ from .lifecycle_views import (
     ThemeListView,
     ThemeStudentsView,
 )
+from .planning import BuildingsView, DaysView, PlanningView, RoomsView
+from .publication_workflow_views import PublicationWorkflowQueueView, PublicationWorkflowView
 from .showcase_views import (
     AcervoListView,
+    AcervoPDFView,
     AcervoPublicListView,
     PublicationDocumentDownloadView,
     PublicationDocumentListCreateView,
@@ -35,7 +43,11 @@ from .showcase_views import (
     PublicationListCreateView,
     PublicationWithdrawView,
     ShowcaseEntryDetailView,
+    ShowcaseEntryEvaluationView,
     ShowcaseEntryListCreateView,
+    ShowcaseEntryMemberAttendanceView,
+    ShowcaseSessionDetailView,
+    ShowcaseSessionListCreateView,
 )
 from .views import (
     AcceptCollaborationApplicationView,
@@ -63,6 +75,18 @@ from .views import (
 )
 
 urlpatterns = [
+    path("publication-workflow/", PublicationWorkflowQueueView.as_view(),
+         name="publication-workflow-queue"),
+    path("<uuid:project_id>/publication-workflow/", PublicationWorkflowView.as_view(),
+         name="publication-workflow"),
+    path("showcase-planning/allocate-evaluators/", AutoEvaluatorAllocationView.as_view()),
+    path("groups/<uuid:group_id>/evaluator-options/", GroupEvaluatorOptionsView.as_view()),
+    path("showcase-planning/", PlanningView.as_view()),
+    path("showcase-days/", DaysView.as_view()),
+    path("showcase-buildings/", BuildingsView.as_view()),
+    path("showcase-buildings/<uuid:building_id>/", BuildingsView.as_view()),
+    path("showcase-buildings/<uuid:building_id>/rooms/", RoomsView.as_view()),
+    path("showcase-rooms/<uuid:room_id>/", RoomsView.as_view()),
     path("themes/", ThemeListView.as_view()),
     path("themes/<uuid:theme_id>/", ThemeDetailView.as_view()),
     path("themes/<uuid:theme_id>/students/", ThemeStudentsView.as_view()),
@@ -136,7 +160,17 @@ urlpatterns = [
         ShowcaseEntryDetailView.as_view(),
         name="showcase-detail",
     ),
+    path(
+        "showcase/<uuid:entry_id>/member-attendance/",
+        ShowcaseEntryMemberAttendanceView.as_view(),
+        name="showcase-member-attendance",
+    ),
     # Sprint 7 — Documento publicável
+    path(
+        "showcase/<uuid:entry_id>/evaluation/",
+        ShowcaseEntryEvaluationView.as_view(),
+        name="showcase-evaluation",
+    ),
     path(
         "<uuid:project_id>/publication-documents/",
         PublicationDocumentListCreateView.as_view(),
@@ -165,5 +199,17 @@ urlpatterns = [
         name="publication-withdraw",
     ),
     path("acervo/", AcervoListView.as_view(), name="acervo-list"),
+    path("acervo/<uuid:publication_id>/pdf/", AcervoPDFView.as_view(), name="acervo-pdf"),
     path("acervo-publico/", AcervoPublicListView.as_view(), name="acervo-publico"),
+    # Sessões de acervo (Mostra)
+    path(
+        "showcase-sessions/",
+        ShowcaseSessionListCreateView.as_view(),
+        name="showcase-session-list",
+    ),
+    path(
+        "showcase-sessions/<uuid:session_id>/",
+        ShowcaseSessionDetailView.as_view(),
+        name="showcase-session-detail",
+    ),
 ]

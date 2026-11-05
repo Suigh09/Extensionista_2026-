@@ -1,87 +1,13 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react'
-import {cancelShowcaseEntry,createShowcaseEntry,createPublicationDocument,listAcervo,listAcervoPublico,listProfessorProjects,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,recordPresence,reviewPublicationDocument,updatePublicationDocumentContent,withdrawPublication,individualGrades,gradeIndividual,type AcervoItem,type AcervoPublicItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project,type IndividualGrade} from './api'
+import {createPublicationDocument,listAcervo,listAcervoPublico,listProfessorProjects,listPublicationDocuments,listPublications,listShowcaseEntries,publishProject,publicationDocumentDownloadUrl,reviewPublicationDocument,updatePublicationDocumentContent,withdrawPublication,individualGrades,gradeIndividual,type AcervoItem,type AcervoPublicItem,type Publication,type PublicationDocument,type ShowcaseEntry,type Profile,type Project,type IndividualGrade} from './api'
+import {ShowcaseAttendanceCard} from './showcasePresence'
+import {acervoPdfUrl} from './api'
 
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
-const showcaseStatusLabels:Record<ShowcaseEntry['status'],string>={PENDING:'Pendente',SCHEDULED:'Agendado',PRESENTED:'Apresentado',ABSENT:'Ausente',CANCELLED:'Cancelado'}
 const documentStatusLabels:Record<PublicationDocument['status'],string>={PENDING:'Pendente',APPROVED:'Aprovado',REJECTED:'Reprovado'}
 
-export function ShowcasePanel({user}:{user:Profile}){
-  const[entries,setEntries]=useState<ShowcaseEntry[]>([])
-  const[message,setMessage]=useState('')
-  const[busy,setBusy]=useState(true)
-  const secretariat=user.role==='SECRETARIAT'||user.role==='ADMIN'
-  const refresh=useCallback(async()=>{
-    setBusy(true)
-    try{setEntries(await listShowcaseEntries())}catch(e){setMessage(failure(e))}
-    finally{setBusy(false)}
-  },[])
-  useEffect(()=>{void refresh()},[refresh])
-  async function submit(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();const form=event.currentTarget;const data=new FormData(form)
-    setMessage('')
-    try{
-      await createShowcaseEntry({group:String(data.get('group')),date:String(data.get('date')),location:String(data.get('location'))})
-      form.reset();saved();setMessage('Mostra agendada.');await refresh()
-    }catch(e){setMessage(failure(e))}
-  }
-  async function cancel(entryId:string,reason:string){
-    setMessage('')
-    try{
-      setEntries(entries.map(e=>e.id===entryId?{...e,status:'CANCELLED',notes:reason}:e))
-      await cancelShowcaseEntry(entryId,reason)
-      saved();setMessage('Entrada cancelada.');await refresh()
-    }catch(e){await refresh();setMessage(failure(e))}
-  }
-  if(!secretariat)return null
-  return (
-    <section className="profile-section" aria-labelledby="showcase-title">
-      <div className="showcase-header">
-        <div>
-          <span className="eyebrow">Mostra Extensionista</span>
-          <h2 id="showcase-title">Agenda da Mostra</h2>
-          <p>Secretaria agenda a apresentação de grupos encaminhados.</p>
-        </div>
-      </div>
-      {busy?<p>Carregando agenda…</p>:(
-        <form className="project-form compact" onSubmit={submit}>
-          <h3>Agendar apresentação</h3>
-          <label>Grupo (UUID)<input name="group" required/></label>
-          <label>Data e hora<input name="date" type="datetime-local" required/></label>
-          <label>Local<input name="location" required maxLength={200}/></label>
-          <button className="button" type="submit">Agendar</button>
-        </form>
-      )}
-      {message&&<p role="status" className="alert">{message}</p>}
-      <div className="subheading">
-        <h3>Agenda</h3>
-        <p>Entradas da Mostra por grupo.</p>
-      </div>
-      {entries.length===0?<p className="empty-state">Nenhuma entrada agendada.</p>:(
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Grupo/Projeto</th><th>Data</th><th>Local</th><th>Status</th><th>Ação</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map(entry=>
-              <tr key={entry.id}>
-                <td><strong>{entry.project_name}</strong><br/><small>{entry.group_name}</small></td>
-                <td>{new Date(entry.date).toLocaleString('pt-BR')}</td>
-                <td>{entry.location}</td>
-                <td><span className={`badge ${entry.status==='SCHEDULED'?'neutral':entry.status==='PRESENTED'?'positive':'negative'}`}>{showcaseStatusLabels[entry.status]}</span></td>
-                <td>{entry.status==='SCHEDULED'&&<button className="button secondary danger" onClick={()=>{if(!window.confirm('Motivo do cancelamento?'))return;void cancel(entry.id,'')}}>Cancelar</button>}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      )}
-    </section>
-  )
-}
-
-export function ShowcasePresencePanel({user}:{user:Profile}){
+export function ShowcasePresencePanel({user,projectId}:{user:Profile;projectId?:string}){
   const[entries,setEntries]=useState<ShowcaseEntry[]>([])
   const[message,setMessage]=useState('')
   const[busy,setBusy]=useState(true)
@@ -92,22 +18,15 @@ export function ShowcasePresencePanel({user}:{user:Profile}){
     finally{setBusy(false)}
   },[])
   useEffect(()=>{void refresh()},[refresh])
-  async function record(entryId:string,status:'PRESENTED'|'ABSENT',notes:string){
-    setMessage('')
-    try{
-      await recordPresence(entryId,status,notes)
-      saved();setMessage(status==='PRESENTED'?'Presença registrada.':'Ausência registrada.');await refresh()
-    }catch(e){setMessage(failure(e))}
-  }
   if(!professor)return null
-  const mine=entries.filter(entry=>entry.is_evaluator)
+  const mine=entries.filter(entry=>entry.is_evaluator&&(!projectId||entry.project_id===projectId)&&['SCHEDULED','PRESENTED','ABSENT'].includes(entry.status))
   return (
     <section className="profile-section" aria-labelledby="presence-title">
       <div className="showcase-header">
         <div>
           <span className="eyebrow">Mostra Extensionista</span>
           <h2 id="presence-title">Registro de presença</h2>
-          <p>Avaliador designado registra apresentação ou ausência do grupo.</p>
+           <p>Confirme a presença de cada integrante e avalie o grupo com nota e observações.</p>
         </div>
       </div>
       {message&&<p role="status" className="alert">{message}</p>}
@@ -115,27 +34,8 @@ export function ShowcasePresencePanel({user}:{user:Profile}){
         <h3>Minhas avaliações</h3>
         <p>Grupos para os quais você foi designado como avaliador.</p>
       </div>
-      {busy?<p>Carregando…</p>:mine.length===0?<p className="empty-state">Nenhum grupo designado a você.</p>:(
-        <table className="data-table">
-          <thead>
-            <tr><th>Grupo/Projeto</th><th>Data</th><th>Status</th><th>Registrar</th></tr>
-          </thead>
-          <tbody>
-            {mine.map(entry=>entry.status!=='SCHEDULED'?null:(
-              <tr key={entry.id}>
-                <td><strong>{entry.project_name}</strong><br/><small>{entry.group_name}</small></td>
-                <td>{new Date(entry.date).toLocaleString('pt-BR')}</td>
-                <td>{showcaseStatusLabels[entry.status]}</td>
-                <td>
-                  <div className="action-row">
-                    <button className="button" onClick={()=>void record(entry.id,'PRESENTED','')}>Apresentado</button>
-                    <button className="button secondary" onClick={()=>void record(entry.id,'ABSENT','')}>Ausente</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {busy?<p>Carregando…</p>:mine.length===0?<p className="empty-state">{projectId?'Nenhuma apresentação disponível para você avaliar neste projeto. Confira se a Secretaria já agendou a Mostra e se você é o avaliador designado.':'Nenhum grupo designado a você.'}</p>:(
+        <div>{mine.map(entry=><ShowcaseAttendanceCard key={entry.id} entry={entry} onUpdate={updated=>setEntries(current=>current.map(item=>item.id===updated.id?updated:item))}/>)}</div>
       )}
     </section>
   )
@@ -426,6 +326,13 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
   )
 }
 
+function AcervoCardDetails({item}:{item:Pick<AcervoItem,'members'|'abstract'>}){
+  return <>
+    <p><strong>Integrantes:</strong> {item.members?.length?item.members.join(' · '):'Integrantes não informados nesta versão.'}</p>
+    <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}><strong>Resumo:</strong> {item.abstract||'Resumo não informado nesta versão.'}</p>
+  </>
+}
+
 export function PublicAcervoPanel(){
   const[items,setItems]=useState<AcervoPublicItem[]>([])
   const[query,setQuery]=useState('')
@@ -463,6 +370,7 @@ export function PublicAcervoPanel(){
           {items.map(item=>
             <article key={item.id} className="project-card">
               <h3>{item.project_name}</h3>
+              <AcervoCardDetails item={item}/>
               <p>Documento versão {item.document_version}</p>
               <small>Publicado em {new Date(item.published_at).toLocaleString('pt-BR')}</small>
             </article>
@@ -509,9 +417,11 @@ export function AcervoPanel(){
         <div className="acervo-grid">
           {items.map(item=>
             <article key={item.id} className="project-card">
-              <h3>{item.project_name}</h3>
+              <h3><a href={acervoPdfUrl(item.id)} target="_blank" rel="noopener noreferrer">{item.project_name}</a></h3>
+              <AcervoCardDetails item={item}/>
               <p>Documento versão {item.document_version}</p>
               <small>Publicado em {new Date(item.published_at).toLocaleString('pt-BR')}</small>
+              <p><a className="button secondary" href={acervoPdfUrl(item.id)} target="_blank" rel="noopener noreferrer" aria-label={`Ler PDF de ${item.project_name} (abre em nova aba)`}>Ler PDF</a></p>
             </article>
           )}
         </div>

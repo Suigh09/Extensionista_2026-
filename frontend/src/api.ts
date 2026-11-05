@@ -11,6 +11,7 @@ export type Member={user_id:string;student_id:number;name:string;ra:string;joine
 export type ProjectGroup={id:string;name:string;class_offering:string;member_count:number;formation_status:'FORMING'|'FORMED'|'COMPLETE';members:Member[];responsible_professor_name:string|null;evaluator_name:string|null;leader?:number|null;leader_user_id?:string|null}
 export type ProjectStatus='DRAFT'|'PENDING_APPROVAL'|'CHANGES_REQUESTED'|'APPROVED'|'COMPLETED'|'ARCHIVED'|'PAUSED'|'CANCELLED'
 export type Project={id:string;name:string;about:string;class_offering:string;status:ProjectStatus;is_active:boolean;created_at:string;updated_at:string;created_by_name:string;submitted_at:string|null;reviewed_at:string|null;review_feedback:string;reviewed_by:string|null;group:ProjectGroup;groups?:ProjectGroup[];theme?:string|null;theme_snapshot?:{title?:string;description?:string};previous_status?:ProjectStatus;can_manage?:boolean;lifecycle?:{id:number;action:string;previous_status:string;new_status:string;reason:string;actor_name:string;created_at:string}[];cancellation_requests?:{id:string;reason:string;status:string;requested_by_name:string;decision_note:string;created_at:string;decided_at:string|null}[]}
+export type NumberedProject=Project&{number:number}
 export type Invitation={id:string;group:string;project_name:string;invitee_user_id:string;invitee_name:string;invitee_ra:string;status:'PENDING'|'ACCEPTED'|'DECLINED'|'CANCELLED';created_at:string;decided_at:string|null}
 export type EligibleStudent={id:string;user:string;name:string;ra:string;course_name:string;class_code:string;term:string}
 export type Attachment={id:string;original_name:string;content_type:string;size:number;download_url:string}
@@ -94,7 +95,7 @@ export const getForwarding=(projectId:string)=>request<Forwarding>(`/projects/${
 export const forwardProject=(projectId:string,data:{observations:string;required_competencies:string})=>request<Forwarding>(`/projects/${projectId}/forward/`,{method:'POST',body:JSON.stringify(data)})
 export const listForwarded=()=>request<Forwarding[]>('/projects/forwarded/')
 
-export type NotificationItem={id:string;kind:string;title:string;body:string;project:string|null;project_name:string|null;is_read:boolean;read_at:string|null;created_at:string}
+export type NotificationItem={id:string;kind:string;title:string;body:string;project:string|null;project_name:string|null;target_url?:string|null;is_read:boolean;read_at:string|null;created_at:string}
 export const listNotifications=()=>request<NotificationItem[]>('/auth/notifications/')
 export const markNotificationRead=(id:string)=>request<NotificationItem>(`/auth/notifications/${id}/read/`,{method:'POST',body:'{}'})
 export const markAllNotificationsRead=()=>request<void>('/auth/notifications/read-all/',{method:'POST',body:'{}'})
@@ -111,7 +112,7 @@ export const searchProfessors=(q:string)=>request<SearchedProfessor[]>(`/academi
 export type Criterion={id:string;name:string;description:string;position:number}
 export type Rubric={id:string;title:string;criteria:Criterion[];created_at:string;updated_at:string}
 export type GradeItem={criterion:string;criterion_name:string;value:string}
-export type GradeSubmission={id:string;group:string;rubric:string;rubric_title:string;author_name:string;comment:string;concluded:boolean;created_at:string;items:GradeItem[]}
+export type GradeSubmission={id:string;group:string;rubric:string|null;rubric_title:string;direct_value?:string|null;author_name:string;comment:string;concluded:boolean;created_at:string;items:GradeItem[]}
 export type GroupGrades={average:string|null;submissions:GradeSubmission[]}
 export type IndividualGrade={id:string;student:string;student_name:string;group:string;value:string;comment:string;author_name:string;created_at:string}
 export const listRubrics=()=>request<Rubric[]>('/projects/rubrics/')
@@ -128,7 +129,10 @@ export const individualGrades=(studentId:string)=>request<{current:IndividualGra
 export const gradeIndividual=(studentId:string,data:{value:string;comment:string})=>request<IndividualGrade>(`/academic/students/${studentId}/individual-grade/`,{method:'POST',body:JSON.stringify(data)})
 
 export type ShowcaseStatus='PENDING'|'SCHEDULED'|'PRESENTED'|'ABSENT'|'CANCELLED'
-export type ShowcaseEntry={id:string;group:string;group_name:string;project_id:string;project_name:string;date:string;location:string;status:ShowcaseStatus;decided_by:string|null;decided_by_name:string|null;notes:string;is_evaluator:boolean;created_at:string;updated_at:string}
+export type ShowcaseMember={member_id:number;name:string;ra:string;present:boolean|null}
+export type ShowcaseEntry={id:string;group:string;group_name:string;project_id:string;project_name:string;date:string;location:string;status:ShowcaseStatus;decided_by:string|null;decided_by_name:string|null;notes:string;is_evaluator:boolean;created_at:string;updated_at:string;members?:ShowcaseMember[];evaluation?:{value:string|null;observations:string;concluded:boolean}|null}
+export const recordMemberAttendance=(entryId:string,members:{member_id:number;present:boolean}[])=>request<ShowcaseEntry>(`/projects/showcase/${entryId}/member-attendance/`,{method:'POST',body:JSON.stringify(members)})
+export const recordShowcaseGrade=(entryId:string,value:string,observations:string)=>request<ShowcaseEntry>(`/projects/showcase/${entryId}/evaluation/`,{method:'POST',body:JSON.stringify({value,observations})})
 export type ShowcaseEntryCreate={group:string;date:string;location:string}
 export const listShowcaseEntries=()=>request<ShowcaseEntry[]>('/projects/showcase/')
 export const createShowcaseEntry=(data:ShowcaseEntryCreate)=>request<ShowcaseEntry>('/projects/showcase/',{method:'POST',body:JSON.stringify(data)})
@@ -149,10 +153,22 @@ export type PublicationCreate={project:string;document:string}
 export type PublicationWithdraw={reason:string}
 export const listPublications=()=>request<Publication[]>('/projects/publications/')
 export const publishProject=(data:PublicationCreate)=>request<Publication>('/projects/publications/',{method:'POST',body:JSON.stringify(data)})
+export type AcervoWorkflowState='NOT_STARTED'|'LEGACY'|'ADVISOR'|'LEADER'|'SECRETARIAT'|'PUBLISHED'|'WITHDRAWN'
+export type PublicationSnapshot={project_id:string;project_name:string;year:number;advisors:string[];members:{name:string;course:string}[]}
+export type AcervoVersion=PublicationDocument&{title:string;abstract:string;snapshot:PublicationSnapshot;workflow:AcervoWorkflowState;parent:string|null;pdf_sha256:string;accepted_at:string|null;accepted_by_name:string|null}
+export type AcervoWorkflow={project:string;project_name:string;number:number;snapshot:PublicationSnapshot;blockers:string[];permissions:{leader:boolean;advisor:boolean;secretariat:boolean};versions:AcervoVersion[];state:AcervoWorkflowState;publication:string|null;publication_detail?:{confirmed_by:string|null;published_at:string;withdrawn_at:string|null}|null;results:{group:string;name:string;grade:string|null;concluded:boolean;observations:string;members:{name:string;ra:string;present:boolean|null}[]}[]}
+export type AcervoQueueItem={id:string;name:string;number:number;state:AcervoWorkflowState}
+export type AcervoAction={action:'submit'|'approve'|'correct'|'accept'|'publish';expected_document:string|null;title?:string;abstract?:string;content?:string;consent?:boolean}
+export const getAcervoWorkflow=(projectId:string)=>request<AcervoWorkflow>(`/projects/${projectId}/publication-workflow/`)
+export const listAcervoWorkflows=()=>request<AcervoQueueItem[]>('/projects/publication-workflow/')
+export const actOnAcervoWorkflow=(projectId:string,data:AcervoAction)=>request<AcervoWorkflow>(`/projects/${projectId}/publication-workflow/`,{method:'POST',body:JSON.stringify(data)})
 export const withdrawPublication=(publicationId:string,reason='')=>request<Publication>(`/projects/publications/${publicationId}/withdraw/`,{method:'POST',body:JSON.stringify({reason})})
 
-export type AcervoItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string}
-export type AcervoPublicItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string}
+
+
+export type AcervoItem={id:string;project_name:string;document_version:number;published_at:string;created_at:string;members:string[];abstract:string}
+export const acervoPdfUrl=(publicationId:string)=>`${API}/projects/acervo/${publicationId}/pdf/`
+export type AcervoPublicItem=AcervoItem
 export const listAcervo=(q='')=>request<AcervoItem[]>(`/projects/acervo/?q=${encodeURIComponent(q)}`)
 export const listAcervoPublico=(q='')=>request<AcervoPublicItem[]>(`/projects/acervo-publico/?q=${encodeURIComponent(q)}`,{credentials:'omit'})
 export const publicationDocumentDownloadPublicUrl=(documentId:string)=>`${API}/projects/publication-documents/${documentId}/download/`
@@ -166,3 +182,50 @@ export type BulkImportResult={
 }
 export const importUsersFromCsv=(file:File)=>request<BulkImportResult>('/auth/users/import-csv/',{method:'POST',body:formDataFromFile(file)})
 function formDataFromFile(file:File){const form=new FormData();form.append('file',file);return form}
+
+export type ShowcaseSessionDto={
+  id:string
+  project_group:string|null
+  group_name:string|null
+  project_name:string|null
+  start_time:string
+  end_time:string
+  location:string
+  status:string
+  notes:string
+  student_names:string
+  can_edit:boolean
+  created_at:string
+  updated_at:string
+}
+export type ShowcaseSessionCreate={
+  project_group:string|null
+  start_time:string
+  end_time:string
+  location:string
+}
+export const listShowcaseSessions=()=>request<ShowcaseSessionDto[]>('/projects/showcase-sessions/')
+export const createShowcaseSession=(data:ShowcaseSessionCreate)=>request<ShowcaseSessionDto>('/projects/showcase-sessions/',{method:'POST',body:JSON.stringify(data)})
+export const updateShowcaseSession=(sessionId:string,data:{start_time?:string;end_time?:string;location?:string;status?:string;notes?:string})=>request<ShowcaseSessionDto>(`/projects/showcase-sessions/${sessionId}/`,{method:'PATCH',body:JSON.stringify(data)})
+export const deleteShowcaseSession=(sessionId:string)=>request<null>(`/projects/showcase-sessions/${sessionId}/`,{method:'DELETE'})
+
+export type ShowcaseBuilding={id:string;number:number;code:string;name:string}
+export type ShowcaseRoom={id:string;building:string;number:number;name:string}
+export type ShowcaseDay={id:string;date:string;start_time:string;end_time:string}
+export type PlanningEntry={id:string;date:string;end_date:string|null;day:string|null;room:string|null;location:string;status:ShowcaseStatus;updated_at:string;evaluator_id?:string|null;evaluator_name?:string|null}
+export type PlanningGroup={id:string;name:string;project:string;number:number;eligible:boolean;project_name:string;members:string[];entry:PlanningEntry|null}
+export type CalendarEntry=PlanningEntry&{group:string;project_name:string;number:number}
+export type ShowcasePlanning={buildings:ShowcaseBuilding[];rooms:ShowcaseRoom[];days:ShowcaseDay[];groups:PlanningGroup[];entries:CalendarEntry[]}
+export type ScheduleGroup={group:string;day:string;room:string;start_time:string;end_time:string;expected_updated_at?:string}
+export const getShowcasePlanning=(q='')=>request<ShowcasePlanning>(`/projects/showcase-planning/?q=${encodeURIComponent(q)}`)
+export const scheduleShowcaseGroup=(data:ScheduleGroup)=>request<PlanningEntry>('/projects/showcase-planning/',{method:'POST',body:JSON.stringify(data)})
+export const createShowcaseBuilding=()=>request('/projects/showcase-buildings/',{method:'POST',body:'{}'})
+export const renameShowcaseBuilding=(id:string,name:string)=>request(`/projects/showcase-buildings/${id}/`,{method:'PATCH',body:JSON.stringify({name})})
+export const createShowcaseRoom=(building:string)=>request(`/projects/showcase-buildings/${building}/rooms/`,{method:'POST',body:'{}'})
+export const renameShowcaseRoom=(id:string,name:string)=>request(`/projects/showcase-rooms/${id}/`,{method:'PATCH',body:JSON.stringify({name})})
+export const createShowcaseDay=(data:Omit<ShowcaseDay,'id'>)=>request<ShowcaseDay>('/projects/showcase-days/',{method:'POST',body:JSON.stringify(data)})
+export type EvaluatorOption=EvaluationRecommendation&{available:boolean;unavailable_reason:string;requires_justification:boolean}
+export type GroupEvaluatorOptions={group:string;current:string|null;current_name:string|null;keywords:string[];recommendations:EvaluatorOption[];locked:boolean}
+export type AllocationResult={allocated:{group:string;name:string}[];preserved:string[];pending:{group:string;project_name:string;reason:string}[]}
+export const getGroupEvaluatorOptions=(group:string)=>request<GroupEvaluatorOptions>(`/projects/groups/${group}/evaluator-options/`)
+export const autoAllocateEvaluators=(day:string,room:string)=>request<AllocationResult>('/projects/showcase-planning/allocate-evaluators/',{method:'POST',body:JSON.stringify({day,room})})

@@ -239,6 +239,25 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="project.name", read_only=True, default=None)
+    target_url = serializers.SerializerMethodField()
+
+    def get_target_url(self, item):
+        if item.project_id and item.kind in {"SHOWCASE_RESULTS", "PUBLICATION_WORKFLOW"}:
+            return f"#/publication/{item.project_id}"
+        if item.kind == Notification.Kind.GROUP_INVITATION:
+            return "#/projects"  # Invitations are accepted here, before project access is granted.
+        if item.project_id:
+            if item.kind in {"DOCUMENT_PENDING", "DOCUMENT_APPROVED", "DOCUMENT_REJECTED"}:
+                return f"#/publication-documents/{item.project_id}"
+            if item.kind in {"PUBLICATION_CREATED", "PUBLICATION_WITHDRAWN"}:
+                return f"#/publication/{item.project_id}"
+            return f"#/projects/{item.project_id}"
+        if item.kind in {"ROOM_INCLUDED", "ROOM_TRANSFER_REQUESTED", "ROOM_TRANSFER_DECIDED"}:
+            role = item.user.role
+            if role in {"ADMIN", "SECRETARIAT"}:
+                return "#/admin"
+            return "#/rooms" if role == "PROFESSOR" else "#/profile"
+        return None
 
     class Meta:
         model = Notification
@@ -249,6 +268,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             "body",
             "project",
             "project_name",
+            "target_url",
             "is_read",
             "read_at",
             "created_at",

@@ -28,6 +28,7 @@ from .models import (
     PublicationDocument,
     Rubric,
     ShowcaseEntry,
+    ShowcaseSession,
 )
 
 
@@ -117,6 +118,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             "id",
+            "number",
             "name",
             "about",
             "class_offering",
@@ -141,6 +143,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "number",
             "class_offering",
             "origin_room",
             "status",
@@ -653,7 +656,9 @@ class GradeItemSerializer(serializers.ModelSerializer):
 class GradeSubmissionSerializer(serializers.ModelSerializer):
     items = GradeItemSerializer(many=True, read_only=True)
     author_name = serializers.CharField(source="author.get_full_name", read_only=True)
-    rubric_title = serializers.CharField(source="rubric.title", read_only=True)
+    rubric_title = serializers.CharField(
+        source="rubric.title", read_only=True, default="Nota direta"
+    )
 
     class Meta:
         model = GradeSubmission
@@ -662,6 +667,7 @@ class GradeSubmissionSerializer(serializers.ModelSerializer):
             "group",
             "rubric",
             "rubric_title",
+            "direct_value",
             "author_name",
             "comment",
             "concluded",
@@ -693,6 +699,8 @@ class IndividualGradeSerializer(serializers.ModelSerializer):
 
 
 class ShowcaseEntrySerializer(serializers.ModelSerializer):
+    members = serializers.SerializerMethodField()
+    evaluation = serializers.SerializerMethodField()
     group_name = serializers.CharField(source="group.name", read_only=True, default="")
     project_id = serializers.UUIDField(source="group.project_id", read_only=True)
     project_name = serializers.CharField(source="group.project.name", read_only=True, default="")
@@ -716,6 +724,8 @@ class ShowcaseEntrySerializer(serializers.ModelSerializer):
             "decided_by_name",
             "notes",
             "is_evaluator",
+            "members",
+            "evaluation",
             "created_at",
             "updated_at",
         ]
@@ -735,6 +745,22 @@ class ShowcaseEntrySerializer(serializers.ModelSerializer):
             return False
         profile = getattr(user, "professor_profile", None)
         return bool(profile and entry.group.evaluator_id == profile.pk)
+
+    def get_members(self, entry):
+        attendance = dict(entry.member_attendances.values_list("member_id", "present"))
+        members = entry.group.members.filter(is_active=True).select_related("student__user")
+        return [{"member_id": member.pk, "name": member.student.user.get_full_name(),
+                 "ra": member.student.ra, "present": attendance.get(member.pk)}
+                for member in members]
+
+    def get_evaluation(self, entry):
+        from .grading import group_grade_value
+
+        value, latest = group_grade_value(entry.group)
+        if latest is None:
+            return None
+        return {"value": str(value) if value is not None else None,
+                "observations": latest.comment, "concluded": latest.concluded}
 
     def validate_date(self, value):
         from django.utils import timezone
@@ -763,6 +789,9 @@ class ShowcaseEntryPresenceSerializer(serializers.Serializer):
 
 
 class PublicationDocumentSerializer(serializers.ModelSerializer):
+    accepted_by_name = serializers.CharField(
+        source="accepted_by.get_full_name", read_only=True, default=None
+    )
     project_name = serializers.CharField(source="project.name", read_only=True, default="")
     reviewed_by_name = serializers.CharField(
         source="reviewed_by.user.get_full_name", read_only=True, default=None
@@ -783,6 +812,14 @@ class PublicationDocumentSerializer(serializers.ModelSerializer):
             "project_name",
             "version",
             "content",
+            "title",
+            "abstract",
+            "snapshot",
+            "workflow",
+            "parent",
+            "pdf_sha256",
+            "accepted_at",
+            "accepted_by_name",
             "original_name",
             "content_type",
             "size",
@@ -817,7 +854,7 @@ class PublicationDocumentSerializer(serializers.ModelSerializer):
         ]
 
     def get_download_url(self, document):
-        return f"/projects/publications/documents/{document.pk}/download/"
+        return f"/projects/publication-documents/{document.pk}/download/"
 
 
 class PublicationDocumentCreateSerializer(serializers.ModelSerializer):
@@ -931,3 +968,76 @@ class PublicationWithdrawSerializer(serializers.Serializer):
         max_length=2000, allow_blank=True, default="", trim_whitespace=True
     )
 
+
+class ShowcaseSessionSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(source="group.name", read_only=True, default="")
+    student_names = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ShowcaseSession
+        fields = [
+            "id",
+            "project_group",
+            "group_name",
+            "student_names",
+            "start_time",
+            "end_time",
+            "location",
+            "status",
+            "notes",
+            "can_edit",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project_group",
+            "group_name",
+            "student_names",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_student_names(self, obj):
+        if not obj.project_group:
+            return ""
+        members = GroupMember.objects.filter(group=obj.project_group, is_active=True)
+        names = [
+            m.student.user.get_full_name() or m.student.user.username
+            for m in members
+        ]
+        return ", ".join(names)
+
+    def get_can_edit(self, obj):
+        user = getattr(self.context.get("request"), "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        if user.role in ("ADMIN", "SECRETARIAT"):
+            return True
+        if user.role == "PROFESSOR":
+            profile = getattr(user, "professor_profile", None)
+            if (
+                profile
+                and obj.project_group
+                and obj.project_group.responsible_professor_id == profile.pk
+            ):
+                return True
+            if profile and obj.project_group and obj.project_group.evaluator_id == profile.pk:
+                return True
+        return False
+
+
+class ShowcaseMemberAttendanceCreateSerializer(serializers.Serializer):
+    member_id = serializers.IntegerField(min_value=1)
+    present = serializers.BooleanField()
+
+    def validate_member_id(self, value):
+        if not GroupMember.objects.filter(pk=value, is_active=True).exists():
+            raise serializers.ValidationError("Membro não encontrado ou inativo.")
+        return value
+
+
+class ShowcaseDirectGradeSerializer(serializers.Serializer):
+    value = serializers.DecimalField(max_digits=4, decimal_places=2, min_value=0, max_value=10)
+    observations = serializers.CharField(max_length=2000, allow_blank=True, default="")

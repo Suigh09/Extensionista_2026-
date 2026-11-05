@@ -1,0 +1,14 @@
+.publication-version-form fieldset label { display:grid; gap:.4rem; align-items:start; }
+.publication-version-form fieldset input:not([type=checkbox]),.publication-version-form fieldset textarea { width:100%; min-width:0; }
+.publication-version-form fieldset .publication-consent { display:flex; align-items:flex-start; gap:.5rem; min-width:0; cursor:pointer; line-height:1.5; }
+.publication-version-form .publication-consent input[type=checkbox] { width:1rem; height:1rem; min-height:1rem; flex:0 0 1rem; padding:0; margin:.2rem 0 0; }
+.publication-version-form .publication-consent span { min-width:0; overflow-wrap:anywhere; }
+.acervo-document-layout { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:1.5rem; align-items:start; margin-top:1.5rem; }
+.acervo-document-editor,.acervo-document-versions { min-width:0; }
+.acervo-document-editor .project-form { position:static; margin:0; }
+.acervo-document-editor fieldset { min-width:0; }
+.acervo-document-versions { overflow-wrap:anywhere; }
+.acervo-document-versions h3 { margin-top:0; }
+.acervo-document-versions details { margin:0 0 1rem; padding:1rem; }
+.acervo-document-versions .button { white-space:normal; }
+@media(max-width:1100px) { .acervo-document-layout { grid-template-columns:minmax(0,1fr); } }

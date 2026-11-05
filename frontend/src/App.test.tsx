@@ -8,20 +8,92 @@ afterEach(()=>{cleanup();vi.restoreAllMocks();window.history.replaceState({},'',
 const student={id:'1',username:'aluno',name:'Aluno Teste',email:'',role:'STUDENT',profile:{ra:'RA1',cpf:'***.***.***-0001'}}
 
 describe('App',()=>{
-  it('carrega o projeto real na rota de publicação e reconhece o integrante',async()=>{
-    const projectId='b73ce311-c50c-419e-8ba6-f3c1a5332e15'
-    const project={id:projectId,name:'Projeto real',groups:[{id:'grupo-1',members:[{user_id:student.id}]}]}
-    window.history.replaceState({},'',`/#/publication/${projectId}`)
-    const fetch=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+  it.each(['pela tela de login','após logoff','por link direto'])('abre acervo público sem sessão %s',async mode=>{
+    let authenticated=mode==='após logoff'
+    window.history.replaceState({},'',mode==='por link direto'?'/#/acervo-publico':'/')
+    vi.spyOn(globalThis,'fetch').mockImplementation(async(input,init)=>{
       const url=String(input)
-      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify(student))
-      if(url.endsWith(`/projects/${projectId}/`))return new Response(JSON.stringify(project))
+      if(url.endsWith('/auth/session/'))return authenticated?new Response(JSON.stringify(student)):new Response('{}',{status:403})
+      if(url.endsWith('/auth/csrf/'))return new Response(JSON.stringify({csrfToken:'token'}))
+      if(url.endsWith('/auth/logout/')&&init?.method==='POST'){authenticated=false;return new Response(null,{status:204})}
+      if(url.includes('/acervo-publico/'))return new Response(JSON.stringify([{id:'pub',project_name:'Projeto público',document_version:3,published_at:'2026-11-05T12:00:00Z',created_at:''}]))
       return new Response('[]')
     })
     render(<App/>)
-    expect(await screen.findByRole('heading',{name:'Publicação do projeto'})).toBeInTheDocument()
-    expect(screen.getByText('Publicar no acervo',{exact:true})).toBeInTheDocument()
-    expect(fetch.mock.calls.some(([input])=>String(input).endsWith(`/projects/${projectId}/`))).toBe(true)
+    if(mode==='após logoff'){
+      await screen.findByRole('heading',{name:'Início'})
+      await userEvent.click(screen.getAllByRole('button',{name:'Sair'})[0])
+    }
+    if(mode!=='por link direto'){
+      await screen.findByRole('heading',{name:'Entrar na plataforma'})
+      window.location.hash='#/acervo-publico'
+      fireEvent(window,new HashChangeEvent('hashchange'))
+    }
+    expect(await screen.findByRole('heading',{name:'Acervo de projetos publicados'})).toBeInTheDocument()
+    expect(await screen.findByText('Projeto público')).toBeInTheDocument()
+    expect(screen.queryByRole('heading',{name:'Entrar na plataforma'})).not.toBeInTheDocument()
+    window.location.hash='#/home'
+    fireEvent(window,new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('heading',{name:'Entrar na plataforma'})).toBeInTheDocument()
+  })
+  it.each(['clique','link direto'])('abre a avaliação da Mostra por %s sem voltar ao Início',async mode=>{
+    const projectId='78a232ca-d136-469b-831f-e4513276c88a'
+    const project={id:projectId,name:'Projeto Homologação Fluxo Acervo',status:'APPROVED',group:{id:'group-5',name:'Grupo principal',member_count:2,evaluator_name:'Avaliador Fluxo'}}
+    const entry={id:'entry-5',group:'group-5',project_id:projectId,project_name:project.name,group_name:'Grupo principal',status:'SCHEDULED',date:'2026-11-05T20:00:00Z',location:'Sala 1',is_evaluator:true,members:[{member_id:1,name:'Aluno Fluxo Um',ra:'HML5001',present:null}],evaluation:null}
+    window.history.replaceState({},'',mode==='clique'?'/#/evaluations':`/#/group-evaluation/${projectId}`)
+    vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+      const url=String(input)
+      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify({...student,role:'PROFESSOR'}))
+      if(url.endsWith('/available-to-professor/'))return new Response(JSON.stringify([project]))
+      if(url.endsWith('/projects/showcase/'))return new Response(JSON.stringify([entry,{...entry,id:'other',project_id:'other',project_name:'Outro projeto'}]))
+      return new Response('[]')
+    })
+    render(<App/>)
+    if(mode==='clique')await userEvent.click(await screen.findByRole('button',{name:'Avaliar grupo'}))
+    expect(await screen.findByRole('checkbox',{name:'Aluno Fluxo Um · HML5001'})).toBeInTheDocument()
+    expect(await screen.findByRole('heading',{name:'Avaliação de grupo'})).toBeInTheDocument()
+    expect(screen.queryByRole('heading',{name:'Início'})).not.toBeInTheDocument()
+    expect(screen.queryByRole('article',{name:'Presença de Outro projeto'})).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  })
+  it.each(['showcase','showcase-schedule'])('agenda única na rota %s',async route=>{
+    window.history.replaceState({},'',`/#/${route}`)
+    vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+      const url=String(input)
+      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify({...student,role:'SECRETARIAT'}))
+      if(url.includes('/showcase-planning/'))return new Response(JSON.stringify({days:[],rooms:[],buildings:[],groups:[],entries:[]}))
+      return new Response('[]')
+    })
+    render(<App/>)
+    await screen.findByLabelText('Data da Mostra')
+    expect(screen.getAllByLabelText('Data da Mostra')).toHaveLength(1)
+    expect(screen.getAllByLabelText('Local (prédio / sala)')).toHaveLength(1)
+    expect(screen.queryByRole('button',{name:'Agendamento da Mostra'})).not.toBeInTheDocument()
+  })
+  it('acervo renderiza uma única pesquisa',async()=>{
+    window.history.replaceState({},'','/#/archive')
+    vi.spyOn(globalThis,'fetch').mockImplementation(async input=>String(input).endsWith('/auth/session/')?new Response(JSON.stringify({...student,role:'SECRETARIAT'})):new Response('[]'))
+    render(<App/>)
+    expect(await screen.findAllByText('Acervo de projetos publicados',{selector:'h2'})).toHaveLength(1)
+    expect(screen.getAllByText('Pesquisar',{selector:'button'})).toHaveLength(1)
+  })
+  it.each(['link direto','clique na lista'])('carrega o fluxo real e respeita a representação do líder por %s',async mode=>{
+    const projectId='b73ce311-c50c-419e-8ba6-f3c1a5332e15'
+    const workflow={project:projectId,project_name:'Projeto real',number:2,state:'NOT_STARTED',blockers:[],versions:[],results:[],publication:null,permissions:{leader:true,advisor:false,secretariat:false},snapshot:{project_id:projectId,project_name:'Projeto real',year:2026,advisors:['Orientador'],members:[{name:'Aluno Teste',course:'Computação'}]}}
+    window.history.replaceState({},'',mode==='link direto'?`/#/publication/${projectId}`:'/#/publication')
+    const fetch=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
+      const url=String(input)
+      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify(student))
+      if(url.endsWith('/projects/publication-workflow/'))return new Response(JSON.stringify([{id:projectId,number:2,name:'Projeto real',state:'NOT_STARTED'}]))
+       if(url.endsWith(`/projects/${projectId}/publication-workflow/`))return new Response(JSON.stringify(workflow))
+      return new Response('[]')
+    })
+    render(<App/>)
+    if(mode==='clique na lista')await userEvent.click(await screen.findByRole('link',{name:'Publicar no Acervo'}))
+    expect(await screen.findByRole('heading',{name:'#2 · Projeto real'})).toBeInTheDocument()
+    expect(await screen.findByRole('button',{name:'Gerar PDF e enviar ao orientador'})).toBeInTheDocument()
+    expect(screen.queryByRole('button',{name:'Confirmar publicação no acervo'})).not.toBeInTheDocument()
+    expect(fetch.mock.calls.some(([input])=>String(input).endsWith(`/projects/${projectId}/publication-workflow/`))).toBe(true)
   })
 
   it('oferece login por CPF, RA ou usuário sem sessão',async()=>{
@@ -235,6 +307,8 @@ describe('App',()=>{
     await user.click(screen.getByRole('button',{name:'Adicionar'}))
     expect(await screen.findByText('Item adicionado.')).toBeInTheDocument()
     expect(await screen.findByText('Desenvolvimento Web')).toBeInTheDocument()
+    expect(screen.queryByRole('heading',{name:'Rubricas de avaliação'})).not.toBeInTheDocument()
+    expect(screen.queryByRole('button',{name:'Criar rubrica'})).not.toBeInTheDocument()
   })
 
   it('secretaria aprova solicitação de transferência com origem e destino',async()=>{

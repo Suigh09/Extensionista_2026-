@@ -34,6 +34,15 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 
 - Modelos de domínio: usuário, perfil de aluno/professor, curso, disciplina, turma, matrícula, sala acadêmica, projeto, grupo, membro do grupo, convite, follow-up, anexo, marco, oportunidade de parceria, candidatura, evento de auditoria.
 - Modelos da Sprint 7 implementados: `ShowcaseEntry`, `PublicationDocument`, `Publication`.
+- Fluxo completo do acervo (05/11/2026): presença por integrante e nota do grupo,
+  inclusive para ausentes; orientador recebe resultados, sem lançar avaliação
+  individual nesta etapa. Líder envia formulário gerador de PDF server-side
+  (ReportLab); orientador aprova ou gera versão corrigida para aceite do líder;
+  Secretaria/Admin confirma publicação. Versões/texto/PDF/snapshot/hash e decisões
+  preservados. Serviço único em publication_workflow.py e interface acervoWorkflow.tsx;
+  aliases de rotas anteriores, sem publicação direta pelo aluno. Guia em
+  docs/ACERVO_WORKFLOW_GUIDE.md; testes integrados usam PostgreSQL descartável.
+- Agenda visual unificada (05/11/2026): locais físicos `ShowcaseBuilding`/`ShowcaseRoom` e dias `ShowcaseDay` gerenciados por Secretaria/Admin, agendamentos de 30 min no próprio `ShowcaseEntry`. O usuário esclareceu que Admin também inclui Secretaria nesses cadastros, sem conceder superusuário Django. `Project.number` fornece identificação curta crescente sem trocar UUID. API de planejamento só staff; presença/publicação continuam na mesma entrada. Protótipo `ShowcaseSession` preservado sem gravação/uso na interface.
 - Chaves críticas usam `PROTECT` para preservar histórico acadêmico.
 - Registros acadêmicos e históricos não expiram automaticamente.
 - CPF não é persistido integralmente (apenas hash e últimos 4 dígitos).
@@ -44,6 +53,7 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 - Frontend: `cd frontend && npm ci && npm run lint && npm test && npm run build`
 - Docker: `docker compose up --build`
 - Scripts locais: `Iniciar Plataforma.bat`, `Parar Plataforma.bat`, `scripts/start_platform.ps1`, `scripts/stop_platform.ps1`
+- Desde 05/11/2026, os atalhos usam exclusivamente backend/PostgreSQL Docker e interface Vite local em `http://127.0.0.1:5173/`. `scripts/platform_common.ps1` fixa o projeto/arquivos Compose e verifica conexão PostgreSQL real; falha do Docker não aciona SQLite. SQLite anterior preservado e reservado a uso explicitamente isolado/testes, sem sincronização de dados ou senhas.
 
 ## Prioridades
 

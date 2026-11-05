@@ -5,3 +5,4 @@ psycopg[binary]==3.2.9
 gunicorn==23.0.0
 whitenoise==6.9.0
 argon2-cffi==25.1.0
+reportlab==5.1.0

@@ -13,6 +13,8 @@ services:
     build: {context: ., dockerfile: backend/Dockerfile}
     restart: unless-stopped
     env_file: .env
+    environment:
+      DATABASE_ENGINE: postgresql
     volumes: [protected_media:/app/backend/protected-media]
     depends_on: {db: {condition: service_healthy}}
     command: ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"]

@@ -1,6 +1,6 @@
 """API views para a Sprint 7 — Mostra, publicação e acervo."""
 
-from django.http import FileResponse
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -23,15 +23,18 @@ from .serializers import (
     PublicationDocumentUpdateSerializer,
     PublicationSerializer,
     PublicationWithdrawSerializer,
+    ShowcaseDirectGradeSerializer,
     ShowcaseEntryCreateSerializer,
     ShowcaseEntryPresenceSerializer,
     ShowcaseEntrySerializer,
+    ShowcaseMemberAttendanceCreateSerializer,
 )
 from .showcase import (
     cancel_showcase_entry,
     create_showcase_entry,
     generate_publication_document,
     publish_project,
+    record_member_attendance,
     record_presence,
     review_publication_document,
     withdraw_publication,
@@ -60,8 +63,10 @@ class _RequireEvaluator(IsAuthenticated):
 class ShowcaseEntryListCreateView(generics.ListCreateAPIView):
     """UC-018: Lista e agenda entradas na Mostra (secretaria/admin)."""
 
-    permission_classes = [_RequireShowcaseStaff]
     pagination_class = None
+
+    def get_permissions(self):
+        return [IsAuthenticated()] if self.request.method == "GET" else [_RequireShowcaseStaff()]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -69,11 +74,15 @@ class ShowcaseEntryListCreateView(generics.ListCreateAPIView):
         return ShowcaseEntrySerializer
 
     def get_queryset(self):
-        return (
+        queryset = (
             ShowcaseEntry.objects.select_related("group__project", "decided_by")
             .order_by("-date", "id")
             .all()
         )
+        user = self.request.user
+        if user.role in {"ADMIN", "SECRETARIAT"}:
+            return queryset
+        return queryset.filter(group__evaluator__user=user)
 
     def perform_create(self, serializer):
         group = serializer.validated_data["group"]
@@ -109,6 +118,10 @@ class ShowcaseEntryDetailView(APIView):
             ShowcaseEntry.objects.select_related("group__project", "decided_by"),
             pk=entry_id,
         )
+        if request.user.role not in {"ADMIN", "SECRETARIAT"}:
+            from .showcase import require_evaluator
+
+            require_evaluator(request.user, entry.group)
         return Response(ShowcaseEntrySerializer(entry, context={"request": request}).data)
 
     def post(self, request, entry_id):
@@ -137,6 +150,50 @@ class ShowcaseEntryDetailView(APIView):
         return Response(ShowcaseEntrySerializer(entry, context={"request": request}).data)
 
 
+class ShowcaseEntryMemberAttendanceView(APIView):
+    """Confirma a presença individual dos integrantes ativos."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, entry_id):
+        entry = get_object_or_404(
+            ShowcaseEntry.objects.select_related("group"), pk=entry_id
+        )
+        profile = getattr(request.user, "professor_profile", None)
+        if not profile or entry.group.evaluator_id != profile.pk:
+            raise PermissionDenied("Somente o avaliador designado pode registrar presença.")
+        serializer = ShowcaseMemberAttendanceCreateSerializer(
+            data=request.data, many=True
+        )
+        serializer.is_valid(raise_exception=True)
+        entry = record_member_attendance(
+            actor=request.user,
+            entry=entry,
+            member_attendances=serializer.validated_data,
+        )
+        return Response(
+            ShowcaseEntrySerializer(
+                entry, context={"request": request}
+            ).data
+        )
+
+
+class ShowcaseEntryEvaluationView(APIView):
+    permission_classes = [_RequireEvaluator]
+
+    def post(self, request, entry_id):
+        from .grading import submit_direct_grade
+
+        entry = get_object_or_404(ShowcaseEntry.objects.select_related("group"), pk=entry_id)
+        serializer = ShowcaseDirectGradeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        submit_direct_grade(
+            actor=request.user, entry=entry, value=serializer.validated_data["value"],
+            comment=serializer.validated_data["observations"],
+        )
+        return Response(ShowcaseEntrySerializer(entry, context={"request": request}).data)
+
+
 class PublicationDocumentListCreateView(generics.ListCreateAPIView):
     """Aluno lista e gera documentos publicáveis."""
 
@@ -151,6 +208,9 @@ class PublicationDocumentListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_id")
+        from .services import accessible_project
+
+        accessible_project(self.request.user, project_id)
         return (
             PublicationDocument.objects.filter(project_id=project_id)
             .select_related("reviewed_by", "generated_by", "consent_by")
@@ -201,6 +261,14 @@ class PublicationDocumentReviewView(APIView):
             raise PermissionDenied("Somente o orientador pode revisar o documento.")
         serializer = PublicationDocumentReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if document.workflow != PublicationDocument.Workflow.LEGACY:
+            from .publication_workflow import decide_document
+
+            if serializer.validated_data["status"] != "APPROVED":
+                raise ValidationError("Use o fluxo do acervo para enviar uma versão corrigida.")
+            document = decide_document(actor=request.user, project_id=document.project_id,
+                                       expected_document=document.pk, action="approve")
+            return Response(PublicationDocumentSerializer(document).data)
         document = review_publication_document(
             actor=request.user,
             document=document,
@@ -221,6 +289,10 @@ class PublicationDocumentUpdateView(APIView):
         )
         if document.generated_by_id != request.user.pk:
             raise PermissionDenied("Somente quem gerou o documento pode editá-lo.")
+        if document.workflow != PublicationDocument.Workflow.LEGACY:
+            raise ValidationError(
+                "Versões enviadas são imutáveis. Envie uma nova versão pelo fluxo do acervo."
+            )
         if document.status != PublicationDocument.Status.PENDING:
             raise ValidationError("Somente documentos pendentes podem ser editados.")
         serializer = PublicationDocumentUpdateSerializer(
@@ -331,7 +403,7 @@ class AcervoListView(generics.ListAPIView):
             queryset = queryset.filter(
                 project__name__icontains=word
             )
-        # Minimização LGPD: expor apenas metadados do projeto, não dados pessoais dos alunos
+        # Nomes e resumo somente da versão publicada, sem RA/IDs/dados acadêmicos.
         data = [
             {
                 "id": str(item.pk),
@@ -339,13 +411,68 @@ class AcervoListView(generics.ListAPIView):
                 "document_version": item.document.version,
                 "published_at": item.published_at,
                 "created_at": item.created_at,
+                "members": [
+                    member["name"]
+                    for member in item.document.snapshot.get("members", [])
+                    if member.get("name")
+                ],
+                "abstract": item.document.abstract,
             }
             for item in queryset
         ]
         return Response(data)
 
 
+class AcervoPDFView(APIView):
+    """Leitura autenticada somente do documento vinculado à publicação vigente."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, publication_id):
+        publication = get_object_or_404(
+            Publication.objects.select_related("document"),
+            pk=publication_id,
+            published_at__isnull=False,
+            withdrawn_at__isnull=True,
+            document__status="APPROVED",
+        )
+        document = publication.document
+        try:
+            response = FileResponse(
+                document.pdf.open("rb"),
+                as_attachment=False,
+                filename=document.original_name,
+                content_type="application/pdf",
+            )
+        except FileNotFoundError as error:
+            raise Http404("PDF indisponível.") from error
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
 class AcervoPublicListView(AcervoListView):
     """Consulta pública do acervo — mesmo conteúdo LGPD, sem exigir sessão."""
 
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class ShowcaseSessionListCreateView(APIView):
+    """Retired prototype: the supported workflow uses ShowcaseEntry and planning."""
+
+    permission_classes = [_RequireShowcaseStaff]
+
+    def get(self, request, **kwargs):
+        return Response({"detail": "Use a agenda unificada em showcase-planning/."}, status=410)
+
+    def post(self, request):
+        return self.get(request)
+
+
+class ShowcaseSessionDetailView(ShowcaseSessionListCreateView):
+
+    def patch(self, request, session_id):
+        return self.get(request)
+
+    def delete(self, request, session_id):
+        return self.get(request)

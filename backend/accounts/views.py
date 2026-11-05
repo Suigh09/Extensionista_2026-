@@ -140,7 +140,7 @@ class NotificationListView(APIView):
     def get(self, request):
         items = (
             Notification.objects.filter(user=request.user)
-            .select_related("project")
+            .select_related("project", "user")
             .order_by("is_read", "-created_at", "id")[:100]
         )
         return Response(NotificationSerializer(items, many=True).data)

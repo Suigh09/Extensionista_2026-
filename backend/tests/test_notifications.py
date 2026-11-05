@@ -3,6 +3,7 @@
 import pytest
 from academic.models import AcademicRoom, StudentProfile
 from accounts.models import Notification, User
+from accounts.serializers import NotificationSerializer
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
@@ -31,6 +32,28 @@ def unread(user, kind=None):
     if kind is not None:
         items = items.filter(kind=kind)
     return items
+
+
+@pytest.mark.django_db
+def test_notification_destinations_follow_kind_and_recipient(academic_context):
+    offering, _, student, _, _, _, teacher, secretary = setup(academic_context)
+    project = create_project(student, offering).json()
+    note = Notification.objects.create(
+        user=secretary.handler._force_user, kind="PROJECT_FORWARDED", project_id=project["id"],
+        title="Recebido",
+    )
+    assert NotificationSerializer(note).data["target_url"] == f"#/projects/{project['id']}"
+    note.kind = "DOCUMENT_PENDING"
+    assert NotificationSerializer(note).data["target_url"] == (
+        f"#/publication-documents/{project['id']}"
+    )
+    note.kind = "GROUP_INVITATION"
+    assert NotificationSerializer(note).data["target_url"] == "#/projects"
+    note.project = None
+    note.kind = "ROOM_TRANSFER_REQUESTED"
+    assert NotificationSerializer(note).data["target_url"] == "#/admin"
+    note.user = teacher.handler._force_user
+    assert NotificationSerializer(note).data["target_url"] == "#/rooms"
 
 
 @pytest.mark.django_db

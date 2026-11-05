@@ -3,8 +3,23 @@ from pathlib import Path
 
 from academic.models import AcademicRoom, ClassOffering, ProfessorProfile, StudentProfile
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
+
+
+class NumberSequence(models.Model):
+    key = models.CharField(max_length=100, primary_key=True)
+    value = models.PositiveBigIntegerField(default=0)
+
+
+def next_number(key):
+    # Row lock serializes allocation on PostgreSQL, including concurrent creates.
+    with transaction.atomic():
+        NumberSequence.objects.get_or_create(key=key)
+        counter = NumberSequence.objects.select_for_update().get(pk=key)
+        counter.value += 1
+        counter.save(update_fields=["value"])
+        return counter.value
 
 
 class Project(models.Model):
@@ -20,6 +35,7 @@ class Project(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=180)
+    number = models.PositiveBigIntegerField(unique=True, editable=False)
     about = models.TextField()
     theme = models.ForeignKey(
         "ProjectTheme",
@@ -58,7 +74,10 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
+        if self.number is None:
+            self.number = next_number("project")
         self.name = self.name.strip()
         super().save(*args, **kwargs)
 
@@ -500,7 +519,10 @@ class GradeSubmission(models.Model):
     group = models.ForeignKey(
         ProjectGroup, on_delete=models.PROTECT, related_name="grade_submissions"
     )
-    rubric = models.ForeignKey(Rubric, on_delete=models.PROTECT, related_name="submissions")
+    rubric = models.ForeignKey(
+        Rubric, null=True, blank=True, on_delete=models.PROTECT, related_name="submissions"
+    )
+    direct_value = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="grade_submissions"
     )
@@ -511,6 +533,14 @@ class GradeSubmission(models.Model):
     class Meta:
         ordering = ["created_at", "id"]
         indexes = [models.Index(fields=["group", "created_at"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(rubric__isnull=False, direct_value__isnull=True)
+                           | Q(rubric__isnull=True, direct_value__gte=0, direct_value__lte=10,
+                               direct_value__isnull=False)),
+                name="submission_rubric_or_direct_value",
+            )
+        ]
 
 
 class GradeItem(models.Model):
@@ -580,6 +610,15 @@ class ShowcaseEntry(models.Model):
         ProjectGroup, on_delete=models.PROTECT, related_name="showcase_entry"
     )
     date = models.DateTimeField()
+    end_date = models.DateTimeField(null=True, blank=True)
+    day = models.ForeignKey(
+        "ShowcaseDay", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="entries",
+    )
+    room = models.ForeignKey(
+        "ShowcaseRoom", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="entries",
+    )
     location = models.CharField(max_length=200)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     decided_by = models.ForeignKey(
@@ -598,6 +637,30 @@ class ShowcaseEntry(models.Model):
         ]
 
 
+class ShowcaseMemberAttendance(models.Model):
+    """Presença individual de cada membro do grupo na Mostra."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    entry = models.ForeignKey(
+        ShowcaseEntry, on_delete=models.PROTECT, related_name="member_attendances"
+    )
+    member = models.ForeignKey(
+        GroupMember, on_delete=models.PROTECT, related_name="showcase_attendances"
+    )
+    present = models.BooleanField(default=False)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recorded_attendances"
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entry", "member"], name="unique_member_attendance_per_entry"
+            )
+        ]
+        indexes = [models.Index(fields=["entry", "member"])]
+
+
 def publication_document_path(instance, filename):
     extension = Path(filename).suffix.lower()
     return f"project-publications/{instance.project_id}/{uuid.uuid4().hex}{extension}"
@@ -611,12 +674,32 @@ class PublicationDocument(models.Model):
         APPROVED = "APPROVED", "Aprovado"
         REJECTED = "REJECTED", "Reprovado"
 
+    class Workflow(models.TextChoices):
+        LEGACY = "LEGACY", "Documento anterior"
+        ADVISOR = "ADVISOR", "Aguardando orientador"
+        LEADER = "LEADER", "Aguardando validação do líder"
+        SECRETARIAT = "SECRETARIAT", "Aguardando Secretaria"
+        PUBLISHED = "PUBLISHED", "Publicado"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
         Project, on_delete=models.PROTECT, related_name="publication_documents"
     )
     version = models.PositiveIntegerField()
     content = models.TextField(blank=True, default="")
+    title = models.CharField(max_length=180, blank=True)
+    abstract = models.TextField(max_length=4000, blank=True)
+    snapshot = models.JSONField(default=dict, blank=True)
+    workflow = models.CharField(max_length=16, choices=Workflow.choices, default=Workflow.LEGACY)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="revisions"
+    )
+    pdf_sha256 = models.CharField(max_length=64, blank=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="accepted_publication_documents",
+    )
+    accepted_at = models.DateTimeField(null=True, blank=True)
     pdf = models.FileField(upload_to=publication_document_path, max_length=300)
     original_name = models.CharField(max_length=255)
     content_type = models.CharField(max_length=120)
@@ -663,6 +746,10 @@ class Publication(models.Model):
         PublicationDocument, on_delete=models.PROTECT, related_name="publications"
     )
     published_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="confirmed_publications",
+    )
     withdrawn_at = models.DateTimeField(null=True, blank=True)
     withdrawal_reason = models.TextField(max_length=2000, blank=True)
     withdrawn_by = models.ForeignKey(
@@ -686,3 +773,78 @@ class Publication(models.Model):
             models.Index(fields=["project"]),
             models.Index(fields=["published_at", "withdrawn_at"]),
         ]
+
+
+class ShowcaseBuilding(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    number = models.PositiveIntegerField(unique=True, editable=False)
+    code = models.CharField(max_length=20, unique=True, editable=False)
+    name = models.CharField(max_length=120)
+
+    class Meta:
+        ordering = ["number"]
+
+
+class ShowcaseRoom(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    building = models.ForeignKey(ShowcaseBuilding, on_delete=models.PROTECT, related_name="rooms")
+    number = models.PositiveIntegerField(editable=False)
+    name = models.CharField(max_length=120)
+
+    class Meta:
+        ordering = ["building__number", "number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["building", "number"], name="unique_showcase_room_number"
+            )
+        ]
+
+
+class ShowcaseDay(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    date = models.DateField(unique=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(end_time__gt=models.F("start_time")),
+                name="showcase_day_positive_window",
+            )
+        ]
+
+
+class ShowcaseSession(models.Model):
+    """Horário disponível para apresentação na Mostra Extensionista."""
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Disponível"
+        SCHEDULED = "SCHEDULED", "Agendado"
+        PRESENTED = "PRESENTED", "Apresentado"
+        ABSENT = "ABSENT", "Ausente"
+        CANCELLED = "CANCELLED", "Cancelado"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project_group = models.ForeignKey(
+        ProjectGroup, on_delete=models.PROTECT,
+        related_name="showcase_sessions", null=True, blank=True,
+    )
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    location = models.CharField(max_length=200)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
+    notes = models.TextField(max_length=2000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_time", "id"]
+        indexes = [
+            models.Index(fields=["start_time", "status"]),
+            models.Index(fields=["project_group", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.start_time} - {self.end_time} ({self.status})"
