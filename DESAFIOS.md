@@ -2,6 +2,11 @@
 
 ## Windows / PowerShell
 
+- GitHub pode permitir WRITE no repo, mas recusar push que altera workflow se o
+  token OAuth não tiver scope workflow. Não retirar o CI nem forçar push para
+  contornar: renovar com gh auth refresh --hostname github.com --scopes workflow
+  e aguardar autorização do usuário no device flow. Não persistir código/token.
+
 - Entrega de senha de homologação nesta sessão: Set-Clipboard/Clipboard.SetDataObject
   falharam e clip.exe retornou acesso negado. Não afirmar cópia bem-sucedida sem
   comparar a leitura. Alternativa iniciada: janela WinForms local lendo DPAPI,

@@ -2,6 +2,10 @@
 
 ## Concluídas
 
+- 05/11/2026: commit de implementação 0a6733b enviado ao GitHub origin/main após
+  autorização do usuário para scope workflow. Push normal confirmado, sem force,
+  sem bancos/credenciais/script local inseguro. CI remoto não declarado aprovado.
+
 - 05/11/2026: usuário autorizou consolidar o projeto atual em commit e enviar ao
   origin/main. Revisão de segredos, diff --check e Ruff backend aprovados; script
   inseguro create_test_data.py preservado somente local, sem bancos/credenciais.
@@ -156,6 +160,7 @@
   de serviço/imagem e contexto Docker. Commit/push autorizados em 05/11/2026.
 
 ## Bloqueadas
+
 
 - Nenhuma nesta etapa: `admin.teste` criado após autorização; Secretaria também gerencia locais, conforme esclarecimento do usuário.
 

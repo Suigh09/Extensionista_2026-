@@ -6,6 +6,12 @@ Esta seção substitui o diagnóstico pré-implementação abaixo.
 
 ### Entrega ao GitHub autorizada — 05/11/2026
 
+- Commit **0a6733b** criado (82 arquivos) e enviado com sucesso ao origin/main.
+  Primeiro push foi recusado por falta de scope workflow; usuário concluiu a
+  autorização via device flow, escopo confirmado e push normal aprovado, sem force.
+  Esta atualização documental consolida a resolução do bloqueio. Códigos/tokens
+  temporários não foram registrados. Conferir Git para hash final da documentação.
+
 - Usuário solicitou commit e envio do projeto atual. Destino configurado:
   `https://github.com/Suigh09/Extensionista_2026-.git`, branch main; fetch confirmou
   base local/remota alinhada antes da consolidação. Git é a fonte para o hash
