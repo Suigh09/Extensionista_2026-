@@ -4,7 +4,7 @@
 
 Implementado e aplicado no Docker: documentos versionados/PDF server-side,
 resultados ao orientador, revisão, aceite exclusivo do líder e confirmação final
-da Secretaria. Guia: docs/ACERVO_WORKFLOW_GUIDE.md. Validação final: 165 backend
+do Administrador. Guia: docs/ACERVO_WORKFLOW_GUIDE.md. Validação final: 165 backend
 em lotes/cobertura 93,14%, 76 frontend, 4 E2E reais PostgreSQL e 6 de contrato.
 Detalhes e limitações operacionais em docs/HANDOFF.md.
 
@@ -45,10 +45,10 @@ anterior; não demonstram aderência ao requisito novo.
 4. Conclusão da avaliação libera somente o líder para elaborar formulário padronizado do
    acervo, vinculado ao projeto e aos integrantes, com título e conteúdo.
 5. Servidor gera PDF e encaminha a versão ao orientador.
-6. Orientador pode aprovar sem alteração, liberando para Secretaria, OU editar o
+6. Orientador pode aprovar sem alteração, liberando para Administrador, OU editar o
    texto, gerando nova versão que retorna ao aluno para validar.
-7. Somente o líder valida a versão corrigida pelo orientador, liberando para Secretaria.
-8. Secretaria confirma a publicação da versão final no acervo. Nada é público
+7. Somente o líder valida a versão corrigida pelo orientador, liberando para Administrador.
+8. Administrador confirma a publicação da versão final no acervo. Nada é público
    antes dessa confirmação. Aluno e professor não publicam diretamente.
 9. Versões, conteúdo, PDF correspondente, autoria, data e decisões ficam visíveis
    aos envolvidos autorizados, sem sobrescrever versões anteriores.
@@ -87,7 +87,7 @@ serializers.py}, frontend/src/{showcase.tsx,showcasePresence.tsx,api.ts}.
 - Reutilizar Project/ProjectGroup/ShowcaseEntry/PublicationDocument/Publication,
   acrescentando estados/versões/eventos necessários. Preferível a um segundo módulo
   de acervo, que duplicaria permissões, histórico e fontes de verdade.
-- Compatibilidade não significa manter endpoint antigo capaz de pular Secretaria:
+- Compatibilidade não significa manter endpoint antigo capaz de pular Administrador:
   adaptar clientes/rotas legados para negar publicação direta e testar a regressão.
 - Mudanças no PDF: comparar ReportLab (menos dependências nativas; layout programado)
   e WeasyPrint (template HTML/CSS mais simples; runtime Docker maior). Recomendação
@@ -116,8 +116,8 @@ Não acrescentar rejeição/edição pela Secretaria sem requisito adicional.
   a divide, zera ou exclui sua referência para o integrante ausente.
 - API bloqueia envio e aceite por integrante que não seja o líder, mesmo que ele
   tenha acesso de leitura ao projeto/histórico.
-- Caminho A: aluno gera PDF → orientador aprova → Secretaria publica.
-- Caminho B: aluno gera v1 → orientador edita v2 → aluno valida v2 → Secretaria
+- Caminho A: aluno gera PDF → orientador aprova → Administrador publica.
+- Caminho B: aluno gera v1 → orientador edita v2 → aluno valida v2 → Administrador
   publica v2; v1 e v2 visíveis e íntegros, sem reutilizar aprovação da v1.
 - Aluno não consegue publicar diretamente pela API antiga; versão desatualizada
   não pode ser aprovada/publicada; concorrência não duplica versões/publicações.

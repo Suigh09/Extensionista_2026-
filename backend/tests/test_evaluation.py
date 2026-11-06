@@ -19,7 +19,7 @@ def setup(academic_context):
     teacher.force_authenticate(room.responsible_professor.user)
     secretary = User.objects.create_user(
         username="secretary-evaluation",
-        role="SECRETARIAT",
+        role="ADMIN",
         password="test-password-123",
     )
     secretary_client = APIClient()

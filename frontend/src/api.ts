@@ -1,4 +1,4 @@
-export type Role='STUDENT'|'PROFESSOR'|'SECRETARIAT'|'ADMIN'
+export type Role='STUDENT'|'PROFESSOR'|'ADMIN'
 export type AcademicItem={id:string;code:string;name:string}
 export type ClassOfferingOption={id:string;label:string;subject_name?:string;offering_code?:string;term?:string;student_count?:number}
 export type EnrollmentSummary={id:string;subject_code:string;subject_name:string;offering_code:string;term:string;professors:string[]}
@@ -153,10 +153,10 @@ export type PublicationCreate={project:string;document:string}
 export type PublicationWithdraw={reason:string}
 export const listPublications=()=>request<Publication[]>('/projects/publications/')
 export const publishProject=(data:PublicationCreate)=>request<Publication>('/projects/publications/',{method:'POST',body:JSON.stringify(data)})
-export type AcervoWorkflowState='NOT_STARTED'|'LEGACY'|'ADVISOR'|'LEADER'|'SECRETARIAT'|'PUBLISHED'|'WITHDRAWN'
+export type AcervoWorkflowState='NOT_STARTED'|'LEGACY'|'ADVISOR'|'LEADER'|'ADMIN'|'PUBLISHED'|'WITHDRAWN'
 export type PublicationSnapshot={project_id:string;project_name:string;year:number;advisors:string[];members:{name:string;course:string}[]}
 export type AcervoVersion=PublicationDocument&{title:string;abstract:string;snapshot:PublicationSnapshot;workflow:AcervoWorkflowState;parent:string|null;pdf_sha256:string;accepted_at:string|null;accepted_by_name:string|null}
-export type AcervoWorkflow={project:string;project_name:string;number:number;snapshot:PublicationSnapshot;blockers:string[];permissions:{leader:boolean;advisor:boolean;secretariat:boolean};versions:AcervoVersion[];state:AcervoWorkflowState;publication:string|null;publication_detail?:{confirmed_by:string|null;published_at:string;withdrawn_at:string|null}|null;results:{group:string;name:string;grade:string|null;concluded:boolean;observations:string;members:{name:string;ra:string;present:boolean|null}[]}[]}
+export type AcervoWorkflow={project:string;project_name:string;number:number;snapshot:PublicationSnapshot;blockers:string[];permissions:{leader:boolean;advisor:boolean;admin:boolean};versions:AcervoVersion[];state:AcervoWorkflowState;publication:string|null;publication_detail?:{confirmed_by:string|null;published_at:string;withdrawn_at:string|null}|null;results:{group:string;name:string;grade:string|null;concluded:boolean;observations:string;members:{name:string;ra:string;present:boolean|null}[]}[]}
 export type AcervoQueueItem={id:string;name:string;number:number;state:AcervoWorkflowState}
 export type AcervoAction={action:'submit'|'approve'|'correct'|'accept'|'publish';expected_document:string|null;title?:string;abstract?:string;content?:string;consent?:boolean}
 export const getAcervoWorkflow=(projectId:string)=>request<AcervoWorkflow>(`/projects/${projectId}/publication-workflow/`)

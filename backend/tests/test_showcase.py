@@ -29,7 +29,7 @@ def setup(academic_context):
     secretary = APIClient()
     secretary.force_authenticate(
         User.objects.create_user(
-            username="secretary-showcase", role="SECRETARIAT", password="test-password-123"
+            username="secretary-showcase", role="ADMIN", password="test-password-123"
         )
     )
     admin = APIClient()
@@ -132,7 +132,7 @@ def ready_document(client, teacher, project, previous):
 
 
 @pytest.mark.django_db
-def test_secretariat_schedules_showcase(academic_context):
+def test_admin_schedules_showcase(academic_context):
     _, _, client, _, _, _, teacher, secretary, _, _ = setup(academic_context)
     project = approved_project(client, academic_context[0])
     set_evaluator(project["id"], teacher.handler._force_user)
@@ -273,7 +273,7 @@ def test_non_orientador_cannot_review_document(academic_context):
 
 
 @pytest.mark.django_db
-def test_leader_submits_and_secretariat_publishes_project_gf09(academic_context):
+def test_leader_submits_and_admin_publishes_project_gf09(academic_context):
     _, _, client, _, _, _, teacher, secretary, _, _ = setup(academic_context)
     project = approved_project(client, academic_context[0])
     set_evaluator(project["id"], teacher.handler._force_user)
@@ -419,7 +419,7 @@ def test_publication_blocked_without_consent(academic_context):
 
 
 @pytest.mark.django_db
-def test_secretariat_withdraws_publication(academic_context):
+def test_admin_withdraws_publication(academic_context):
     _, _, client, _, _, _, teacher, secretary, _, _ = setup(academic_context)
     project = approved_project(client, academic_context[0])
     set_evaluator(project["id"], teacher.handler._force_user)

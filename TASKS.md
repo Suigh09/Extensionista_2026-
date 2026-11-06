@@ -86,7 +86,7 @@
   descartável e UI real do avaliador validadas. Projeto #2 ainda sem presença
   individual/nota, aguardando atos do usuário. Detalhes atuais em docs/HANDOFF.md.
 
-- 05/11/2026: usuário esclareceu que Admin também inclui Secretaria nos cadastros de locais. Permissões backend e interface ajustadas para ambos; alunos/professores seguem bloqueados. Criada conta `admin.teste` com credencial de homologação existente, sem is_staff/is_superuser Django. Validação: 16 testes backend de planejamento, 7 frontend, Ruff/lint/build e logins/API reais de Secretaria/Admin aprovados.
+- 05/11/2026: perfis Secretaria e Admin unificados no perfil **Administrador** (`ADMIN`). Usuário `secretaria.teste` passou a ter role `ADMIN`. Conta `admin.teste` com credencial de homologação existente, sem is_staff/is_superuser Django. Validação: 16 testes backend de planejamento, 7 frontend, Ruff/lint/build e logins/API reais aprovados.
 - Validação da agenda em 05/11/2026: backend 119 testes/cobertura 92,29%; frontend 61 testes/cobertura configurada 91,64%; Playwright novo 4 cenários desktop/mobile; concorrência em PostgreSQL descartável e navegação real de secretaria.teste validadas. CI remoto/E2E legado completo não executados.
 - Protótipo `ShowcaseSession` retirado do fluxo em 05/11/2026; dados preservados e rotas com resposta 410. Agenda usa `ShowcaseEntry` para integração real com presença/publicação. Não retomar o protótipo paralelo.
 - 05/11/2026: agenda visual unificada, locais físicos/datas Secretaria/Admin, passos de 30 min, drag-and-drop/resize e alternativa sem arrastar, busca por integrantes/projeto/número. IDs curtos aditivos e links de notificações corrigidos; migrações preservadoras 0022/0023. Guia: `docs/SHOWCASE_PLANNING_GUIDE.md`.

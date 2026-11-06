@@ -12,7 +12,7 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
 
 - Aluno
 - Professor (orientador, avaliador contextual, responsável por sala)
-- Secretaria
+- Administrador
 - Administrador
 - Público (acervo, com restrições de visibilidade no MVP)
 
@@ -38,11 +38,11 @@ A gestão acadêmica tradicional é complexa e exige esforço manual. A platafor
   inclusive para ausentes; orientador recebe resultados, sem lançar avaliação
   individual nesta etapa. Líder envia formulário gerador de PDF server-side
   (ReportLab); orientador aprova ou gera versão corrigida para aceite do líder;
-  Secretaria/Admin confirma publicação. Versões/texto/PDF/snapshot/hash e decisões
+  Administrador confirma publicação. Versões/texto/PDF/snapshot/hash e decisões
   preservados. Serviço único em publication_workflow.py e interface acervoWorkflow.tsx;
   aliases de rotas anteriores, sem publicação direta pelo aluno. Guia em
   docs/ACERVO_WORKFLOW_GUIDE.md; testes integrados usam PostgreSQL descartável.
-- Agenda visual unificada (05/11/2026): locais físicos `ShowcaseBuilding`/`ShowcaseRoom` e dias `ShowcaseDay` gerenciados por Secretaria/Admin, agendamentos de 30 min no próprio `ShowcaseEntry`. O usuário esclareceu que Admin também inclui Secretaria nesses cadastros, sem conceder superusuário Django. `Project.number` fornece identificação curta crescente sem trocar UUID. API de planejamento só staff; presença/publicação continuam na mesma entrada. Protótipo `ShowcaseSession` preservado sem gravação/uso na interface.
+- Agenda visual unificada (05/11/2026): locais físicos `ShowcaseBuilding`/`ShowcaseRoom` e dias `ShowcaseDay` gerenciados por Administrador, agendamentos de 30 min no próprio `ShowcaseEntry`. O usuário esclareceu que Admin inclui esses cadastros, sem conceder superusuário Django. `Project.number` fornece identificação curta crescente sem trocar UUID. API de planejamento só staff; presença/publicação continuam na mesma entrada. Protótipo `ShowcaseSession` preservado sem gravação/uso na interface.
 - Chaves críticas usam `PROTECT` para preservar histórico acadêmico.
 - Registros acadêmicos e históricos não expiram automaticamente.
 - CPF não é persistido integralmente (apenas hash e últimos 4 dígitos).

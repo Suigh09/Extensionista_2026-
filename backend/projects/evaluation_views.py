@@ -123,7 +123,7 @@ class AutoAllocationInput(serializers.Serializer):
 class AutoEvaluatorAllocationView(APIView):
     def post(self, request):
         if not is_admin(request.user):
-            raise PermissionDenied("Somente a Secretaria/Admin aloca avaliadores.")
+            raise PermissionDenied("Somente o Administrador aloca avaliadores.")
         serializer = AutoAllocationInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         day = get_object_or_404(ShowcaseDay, pk=serializer.validated_data["day"])

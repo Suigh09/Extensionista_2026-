@@ -22,7 +22,6 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         STUDENT = "STUDENT", "Aluno"
         PROFESSOR = "PROFESSOR", "Professor"
-        SECRETARIAT = "SECRETARIAT", "Secretaria"
         ADMIN = "ADMIN", "Administrador"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

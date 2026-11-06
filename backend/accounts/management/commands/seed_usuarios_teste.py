@@ -25,7 +25,7 @@ class Command(BaseCommand):
         for username, role in (
             ("admin", User.Role.ADMIN),
             ("professor", User.Role.PROFESSOR),
-            ("secretaria", User.Role.SECRETARIAT),
+            ("secretaria", User.Role.ADMIN),
             ("aluno", User.Role.STUDENT),
         ):
             user, created = User.objects.get_or_create(

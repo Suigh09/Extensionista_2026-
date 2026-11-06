@@ -56,6 +56,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='publicationdocument',
             name='workflow',
-            field=models.CharField(choices=[('LEGACY', 'Documento anterior'), ('ADVISOR', 'Aguardando orientador'), ('LEADER', 'Aguardando validação do líder'), ('SECRETARIAT', 'Aguardando Secretaria'), ('PUBLISHED', 'Publicado')], default='LEGACY', max_length=16),
+            field=models.CharField(choices=[('LEGACY', 'Documento anterior'), ('ADVISOR', 'Aguardando orientador'), ('LEADER', 'Aguardando validação do líder'), ('ADMIN', 'Aguardando Administrador'), ('PUBLISHED', 'Publicado')], default='LEGACY', max_length=16),
         ),
     ]

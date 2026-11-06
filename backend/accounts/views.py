@@ -177,7 +177,7 @@ class NotificationReadAllView(APIView):
 class UserBulkImportView(APIView):
     """Importa usuários em massa via arquivo CSV.
 
-    Requer permissão institucional (Admin/Secretaria).
+    Requer permissão institucional (Admin).
     Formato: multipart/form-data com campo 'file' contendo o CSV.
     """
 

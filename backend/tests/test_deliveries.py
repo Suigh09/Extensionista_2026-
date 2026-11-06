@@ -245,7 +245,7 @@ def test_forward_requires_approved_delivery_and_lists_queue(academic_context):
     from accounts.models import User
 
     secretary = User.objects.create_user(
-        username="secretary-deliveries", role="SECRETARIAT", password="test-password-123"
+        username="admin-deliveries", role="ADMIN", password="test-password-123"
     )
     admin.force_authenticate(secretary)
     queue = admin.get("/api/v1/projects/forwarded/")

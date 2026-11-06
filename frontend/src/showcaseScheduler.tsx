@@ -22,7 +22,7 @@ export function ShowcaseScheduler({user}:{user:Pick<Profile,'role'>}){
   const[evaluatorGroup,setEvaluatorGroup]=useState(''),[allocation,setAllocation]=useState<AllocationResult|null>(null)
   const gesture=useRef<{entry:CalendarEntry;y:number;initialEnd:number;end:number}|null>(null)
   const revision=useRef(0)
-  const staff=user.role==='ADMIN'||user.role==='SECRETARIAT'
+  const staff=user.role==='ADMIN'
   const refresh=useCallback(async()=>{
     const version=++revision.current
     const result=await getShowcasePlanning(search)

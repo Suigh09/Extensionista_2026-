@@ -97,7 +97,7 @@ def schedule_group(*, actor, data):
     if not group.is_active or not project.is_active or project.status != Project.Status.APPROVED:
         raise ValidationError("Somente grupos ativos de projetos aprovados podem ser agendados.")
     if not hasattr(project, "forwarding"):
-        raise ValidationError("O projeto precisa estar encaminhado à Secretaria.")
+        raise ValidationError("O projeto precisa estar encaminhado ao Administrador.")
     if project.cancellation_requests.filter(status="PENDING").exists():
         raise ValidationError("Há cancelamento pendente para este projeto.")
     # A day lock protects overlapping room reservations even when the room is still empty.

@@ -10,7 +10,7 @@ test('alocação automática preserva pendência e permite escolha individual',a
   page.on('dialog',dialog=>dialog.accept())
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname
-    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',role:'SECRETARIAT',name:'Secretaria',profile:null}})
+    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',role:'ADMIN',name:'Administrador',profile:null}})
     if(path.endsWith('/auth/csrf/'))return route.fulfill({json:{csrfToken:'test-csrf'}})
     if(path.endsWith('/allocate-evaluators/')){
       expect(route.request().postDataJSON()).toEqual({day:'day',room:'room'})
@@ -58,7 +58,7 @@ test('agenda única: drag, resize, persistência e busca por integrante',async({
   const writes:Record<string,string>[]=[]
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname
-    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',name:'Secretaria Teste',role:'SECRETARIAT',profile:null}})
+    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',name:'Secretaria Teste',role:'ADMIN',profile:null}})
     if(path.endsWith('/auth/csrf/'))return route.fulfill({json:{csrfToken:'test-csrf'}})
     if(path.includes('/showcase-planning/')){
       if(route.request().method()==='POST'){
@@ -131,7 +131,7 @@ test('notificação de encaminhamento abre o projeto e acervo não duplica',asyn
   page.on('pageerror',error=>errors.push(error.message))
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname
-    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',name:'Secretaria Teste',role:'SECRETARIAT',profile:null}})
+    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:'secretary',username:'secretaria.teste',name:'Secretaria Teste',role:'ADMIN',profile:null}})
     if(path.endsWith('/auth/csrf/'))return route.fulfill({json:{csrfToken:'test-csrf'}})
     if(path.endsWith('/notifications/'))return route.fulfill({json:[{id:'note',title:'Encaminhamento recebido',body:'Projeto recebido da orientação',project:'project',kind:'PROJECT_FORWARDED',is_read:false,created_at:'2026-11-05T12:00:00Z'}]})
     if(path.endsWith('/projects/project/'))return route.fulfill({json:{id:'project',number:1,name:'Projeto encaminhado',about:'Proposta de extensão',status:'APPROVED',groups:[],group:{id:'group',member_count:2,members:[],formation_status:'FORMED'},is_active:true,can_manage:false}})

@@ -5,7 +5,7 @@
 - Autorizada explicitamente no chat após o contrato de negócio. Reutilizar os
   modelos de documento/publicação com campos aditivos e estado LEGACY para dados
   anteriores; não converter uploads antigos em aprovações/aceites novos fictícios.
-- Estados ADVISOR → SECRETARIAT ou ADVISOR → LEADER → SECRETARIAT → PUBLISHED.
+- Estados ADVISOR → ADMIN ou ADVISOR → LEADER → ADMIN → PUBLISHED.
   PDF/texto/snapshot por versão, parent, autor/datas, aceite e confirmação específicos
   da versão. Nenhum texto enviado é sobrescrito pelo novo fluxo.
 - ReportLab 5.1.0 escolhido para formulário textual institucional: dispensa runtime
@@ -15,7 +15,7 @@
 - Gravar sob lock do projeto, com expected_document obrigatório (null apenas no
   primeiro envio). Alternativa count()+1/estado só no frontend rejeitada por corrida
   e atalhos de autorização. Testes concorrentes em PostgreSQL confirmaram unicidade.
-- Líder envia e aceita; orientador aprova sem alterações ou cria revisão; Secretaria/
+- Líder envia e aceita; orientador aprova sem alterações ou cria revisão; Administrador/
   Admin confirma publicação. API antiga não publica diretamente como aluno.
   Retirada institucional/histórico/vedação de republicação preservadas.
 - Orientador recebe resultados sem gate de avaliação individual externa. Formulário
@@ -30,7 +30,7 @@
   individual e independente da nota. Não gerar nota zero/excluir nota por ausência.
 - Orientador recebe nota/presenças/observações para registro; eventual julgamento
   individual é realizado em outra plataforma, sem novo gate ou integração externa.
-- Somente o líder envia o formulário e valida alterações do orientador. Secretaria
+- Somente o líder envia o formulário e valida alterações do orientador. Administrador
   confirma publicação final. Outros integrantes não podem representar o grupo
   nesses atos, embora possam consultar o histórico autorizado.
 - Estado: contrato funcional esclarecido, novo fluxo completo ainda não implementado.
@@ -54,7 +54,7 @@
 
 ## 05/11/2026 — Agenda única, locais físicos e identificação curta
 
-- Pedido do usuário autoriza cadastro de locais físicos e dias por Admin/Secretaria (esclarecimento explícito posterior: ao dizer Admin, também inclui Secretaria nestes cadastros) e agenda por sala com meias horas, movimentação/redimensionamento e pesquisa. Isso não concede superusuário Django nem promove contas da Secretaria para o papel ADMIN.
+- Pedido do usuário autoriza cadastro de locais físicos e dias por Administrador e agenda por sala com meias horas, movimentação/redimensionamento e pesquisa. Isso não concede superusuário Django.
 - Preservar `ShowcaseEntry` como fonte para presença/publicação, estendendo com dia, sala e fim. Retirar o protótipo paralelo da interface e da gravação, mantendo dados/modelo. Evita duas agendas inconsistentes.
 - Prédios e salas físicos não reutilizam `AcademicRoom`, que possui responsabilidades acadêmicas distintas. Nomes editáveis, códigos/números crescentes e estáveis, sem exclusão destrutiva.
 - Número curto é campo adicional: trocar a PK UUID quebraria referências/URLs. Contadores persistentes com locks evitam `count()+1`/`max()+1` sujeitos a corrida; números existentes atribuídos por ordem de criação, sem mudar UUID.

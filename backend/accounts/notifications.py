@@ -28,6 +28,6 @@ def institutional_staff():
 
     return list(
         User.objects.filter(
-            is_active=True, role__in=[User.Role.SECRETARIAT, User.Role.ADMIN]
+            is_active=True, role__in=[User.Role.ADMIN]
         )
     )

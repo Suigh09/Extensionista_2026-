@@ -97,7 +97,6 @@ class Migration(migrations.Migration):
                         choices=[
                             ("STUDENT", "Aluno"),
                             ("PROFESSOR", "Professor"),
-                            ("SECRETARIAT", "Secretaria"),
                             ("ADMIN", "Administrador"),
                         ],
                         max_length=16,

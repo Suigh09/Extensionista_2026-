@@ -188,7 +188,7 @@ class InstitutionalProjectsView(APIView):
 
     def get(self, request):
         if not is_admin(request.user):
-            raise PermissionDenied("Área disponível à Secretaria/Admin.")
+            raise PermissionDenied("Área disponível ao Administrador.")
         return Response(
             ProjectSerializer(
                 Project.objects.filter(is_active=True)

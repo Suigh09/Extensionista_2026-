@@ -250,9 +250,9 @@ class RoomTransferRequestListView(generics.ListAPIView):
     def get_queryset(self):
         if (
             not self.request.user.is_active
-            or self.request.user.role not in {"SECRETARIAT", "ADMIN"}
+            or self.request.user.role != "ADMIN"
         ):
-            raise PermissionDenied("Acesso disponível somente para a secretaria.")
+            raise PermissionDenied("Acesso disponível somente para o Administrador.")
         queryset = RoomTransferRequest.objects.select_related(
             "student__user",
             "source_room__responsible_professor__user",
@@ -294,9 +294,9 @@ class ProfessorSearchView(generics.ListAPIView):
     def get_queryset(self):
         if (
             not self.request.user.is_active
-            or self.request.user.role not in {"SECRETARIAT", "ADMIN"}
+            or self.request.user.role != "ADMIN"
         ):
-            raise PermissionDenied("Área disponível à Secretaria/Admin.")
+            raise PermissionDenied("Área disponível ao Administrador.")
         query = self.request.query_params.get("q", "").strip()[:100]
         if len(query) < 2:
             return ProfessorProfile.objects.none()

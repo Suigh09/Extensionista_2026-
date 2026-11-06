@@ -166,7 +166,7 @@ def designate_evaluator(
     expected_schedule=None,
 ):
     if not is_admin(actor):
-        raise PermissionDenied("Somente a Secretaria/Admin designa avaliadores.")
+        raise PermissionDenied("Somente o Administrador designa avaliadores.")
     group = (
         ProjectGroup.objects.select_for_update(of=("self",))
         .select_related("project", "responsible_professor")
@@ -249,7 +249,7 @@ def designate_evaluator(
         "EVALUATOR_DESIGNATED",
         "",
         professor.user.get_full_name(),
-        justification or "Avaliador designado pela secretaria.",
+        justification or "Avaliador designado pelo administrador.",
     )
     from accounts.models import Notification
     from accounts.notifications import notify
@@ -258,7 +258,7 @@ def designate_evaluator(
         professor.user,
         Notification.Kind.EVALUATOR_DESIGNATED,
         f"Você foi designado avaliador de {project.name}",
-        justification or "Designação da secretaria.",
+        justification or "Designação do administrador.",
         project=project,
     )
     return assignment
@@ -266,7 +266,7 @@ def designate_evaluator(
 
 def auto_allocate_evaluators(*, actor, day, room):
     if not is_admin(actor):
-        raise PermissionDenied("Somente a Secretaria/Admin aloca avaliadores.")
+        raise PermissionDenied("Somente o Administrador aloca avaliadores.")
     entries = list(
         ShowcaseEntry.objects.filter(
             day=day,

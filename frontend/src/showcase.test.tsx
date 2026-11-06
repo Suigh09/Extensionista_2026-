@@ -25,7 +25,7 @@ vi.mock('./api',()=>({
 
 afterEach(()=>{cleanup();vi.clearAllMocks();vi.restoreAllMocks()})
 
-const secretariat={id:'s1',username:'secretaria',name:'Secretaria Teste',email:'',role:'SECRETARIAT'}as Profile
+const secretariat={id:'s1',username:'secretaria',name:'Secretaria Teste',email:'',role:'ADMIN'}as Profile
 const professor={id:'p1',username:'professor',name:'Professor Teste',email:'',role:'PROFESSOR',profile:{registration:'P1'}}as Profile
 const student={id:'a1',username:'aluno',name:'Aluno Teste',email:'',role:'STUDENT',profile:{ra:'RA1'}}as Profile
 

@@ -2,7 +2,7 @@
 
 ## Implementação atual — acervo completo, 05/11/2026
 
-Esta seção substitui o diagnóstico pré-implementação abaixo.
+Esta seção substitui o diagnóstico pré-implementação abaixo. A partir desta data, os perfis Secretaria e Admin foram unificados no perfil **Administrador** (`ADMIN`).
 
 ### Entrega ao GitHub autorizada — 05/11/2026
 

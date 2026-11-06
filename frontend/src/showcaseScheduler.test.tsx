@@ -24,7 +24,7 @@ describe('agenda unificada',()=>{
     vi.mocked(autoAllocateEvaluators).mockResolvedValue({allocated:[{group:'group',name:'Ana'}],preserved:[],pending:[{group:'pending',project_name:'Outro projeto',reason:'Sem aderência; escolha manualmente.'}]})
     vi.spyOn(window,'confirm').mockReturnValue(true)
     try{
-      const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+      const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
       await user.click(await screen.findByRole('button',{name:'Alocar avaliadores automaticamente'}))
       expect(autoAllocateEvaluators).toHaveBeenCalledWith('day','room')
       expect(await screen.findByRole('status',{name:'Resultado da alocação'})).toHaveTextContent('1 alocado(s) · 0 preservado(s) · 1 pendente(s)')
@@ -37,7 +37,7 @@ describe('agenda unificada',()=>{
     expect(fetchMock).not.toHaveBeenCalled()
   })
   it('mostra seletores cadastrados, duas colunas e cadastro de locais para Secretaria',async()=>{
-    render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+    render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
     expect(await screen.findByText('#1 · Projeto Escola')).toBeInTheDocument()
     expect(screen.getByLabelText('Data da Mostra')).toHaveValue('day')
     expect(screen.getByLabelText('Local (prédio / sala)')).toHaveValue('room')
@@ -52,13 +52,13 @@ describe('agenda unificada',()=>{
     expect(screen.getByLabelText('Nome do prédio A')).toHaveValue('Prédio A')
   })
   it('agenda por teclado/botão sem precisar arrastar',async()=>{
-    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
     await user.click(await screen.findByText('Selecionar para agendar'))
     await user.click(screen.getByRole('button',{name:'Agendar grupo selecionado às 08:30'}))
     await waitFor(()=>expect(scheduleMock).toHaveBeenCalledWith({group:'group',day:'day',room:'room',start_time:'08:30',end_time:'09:00'}))
   })
   it('arrasta grupo para meia hora e mantém persistência no backend',async()=>{
-    render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+    render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
     await screen.findByText('#1 · Projeto Escola')
     const slot=screen.getByRole('button',{name:'Agendar grupo selecionado às 09:00'}).parentElement!
     fireEvent.drop(slot,{dataTransfer:{getData:()=> 'group'}})
@@ -70,14 +70,14 @@ describe('agenda unificada',()=>{
     data.groups[0].entry=data.entries[0]
     fetchMock.mockResolvedValue(data)
     scheduleMock.mockRejectedValue(new Error('Este horário já está ocupado nesta sala.'))
-    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
     await user.click(await screen.findByRole('button',{name:'Aumentar duração de Projeto Escola'}))
     expect(await screen.findByRole('status')).toHaveTextContent('Este horário já está ocupado')
     expect(scheduleMock).toHaveBeenCalledWith(expect.objectContaining({end_time:'09:00',expected_updated_at:'version'}))
     expect(within(screen.getByTestId('booking-entry')).getByText('08:00–08:30')).toBeInTheDocument()
   })
   it('busca projetos em todas as datas sem filtrar o quadro de ocupação',async()=>{
-    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'SECRETARIAT'}}/>)
+    const user=userEvent.setup();render(<ShowcaseScheduler user={{role:'ADMIN'}}/>)
     await screen.findByText('#1 · Projeto Escola')
     await user.type(screen.getByLabelText('Buscar projeto, integrante ou ID'),'Maria')
     await user.click(screen.getByText('Pesquisar'))

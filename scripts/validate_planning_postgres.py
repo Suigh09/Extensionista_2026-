@@ -56,7 +56,7 @@ def main():
         from projects.planning import schedule_group
         from rest_framework.exceptions import PermissionDenied, ValidationError
 
-        actor = User.objects.create_user(username="temporary-secretary", role="SECRETARIAT")
+        actor = User.objects.create_user(username="temporary-secretary", role="ADMIN")
         subject = Subject.objects.create(code="TEMP", name="Extensão temporária")
         offering = ClassOffering.objects.create(subject=subject, term="2026.2", code="TEMP")
 

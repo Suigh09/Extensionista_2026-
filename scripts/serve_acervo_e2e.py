@@ -67,7 +67,7 @@ def seed():
         raise RuntimeError("Senha de testes não fornecida pelo runner.")
     users = {}
     for role, key in [
-        ("SECRETARIAT", "secretary"),
+        ("ADMIN", "secretary"),
         ("PROFESSOR", "advisor"),
         ("PROFESSOR", "evaluator"),
         ("STUDENT", "leader"),

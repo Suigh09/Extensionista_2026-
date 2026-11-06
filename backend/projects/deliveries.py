@@ -176,7 +176,7 @@ def forward_project(*, actor, project, observations="", required_competencies=""
     ) and not is_admin(actor):
         raise PermissionDenied("Somente o professor orientador pode encaminhar.")
     if hasattr(project, "forwarding"):
-        raise ValidationError("Este projeto já foi encaminhado à secretaria.")
+        raise ValidationError("Este projeto já foi encaminhado ao administrador.")
     snapshot = {}
     for group in groups:
         approved = group_approved_delivery(project, group)
@@ -199,7 +199,7 @@ def forward_project(*, actor, project, observations="", required_competencies=""
                 forwarded_by=actor,
             )
     except IntegrityError as error:
-        raise ValidationError("Este projeto já foi encaminhado à secretaria.") from error
+        raise ValidationError("Este projeto já foi encaminhado ao administrador.") from error
     audit(
         actor,
         "FORWARD_PROJECT",
@@ -212,7 +212,7 @@ def forward_project(*, actor, project, observations="", required_competencies=""
         "PROJECT_FORWARDED",
         project.status,
         project.status,
-        "Projeto encaminhado à secretaria.",
+        "Projeto encaminhado ao administrador.",
     )
     from accounts.models import Notification
     from accounts.notifications import institutional_staff, notify

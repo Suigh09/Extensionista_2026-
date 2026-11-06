@@ -1,4 +1,4 @@
-"""Fluxo único do acervo: líder → orientador → líder (se editado) → Secretaria."""
+"""Fluxo único do acervo: líder → orientador → líder (se editado) → Administrador."""
 
 import hashlib
 
@@ -83,7 +83,7 @@ def publication_blockers(project):
     if project.cancellation_requests.filter(status="PENDING").exists():
         reasons.append("Há cancelamento pendente.")
     if not hasattr(project, "forwarding"):
-        reasons.append("O projeto precisa estar encaminhado à Secretaria.")
+        reasons.append("O projeto precisa estar encaminhado ao Administrador.")
     groups = list(project.groups.filter(is_active=True))
     if not groups:
         reasons.append("O projeto não possui grupo ativo.")
@@ -308,7 +308,7 @@ def decide_document(
             workflow=W.LEADER,
             consent=current.consent_given,
         )
-    current.workflow = W.SECRETARIAT
+    current.workflow = W.ADMIN
     current.status = PublicationDocument.Status.APPROVED
     if action == "approve":
         current.reviewed_by = actor.professor_profile
@@ -350,8 +350,8 @@ def confirm_publication(*, actor, project_id, expected_document):
     project = _locked_project(actor, project_id)
     _eligible(project)
     current = _current(project, expected_document)
-    if current is None or current.workflow != W.SECRETARIAT or current.status != "APPROVED":
-        raise ValidationError("A versão vigente precisa estar validada e aguardando a Secretaria.")
+    if current is None or current.workflow != W.ADMIN or current.status != "APPROVED":
+        raise ValidationError("A versão vigente precisa estar validada e aguardando o Administrador.")
     if not current.consent_given or not current.reviewed_by_id:
         raise ValidationError("Falta consentimento ou aprovação do orientador.")
     if (
@@ -378,6 +378,6 @@ def confirm_publication(*, actor, project_id, expected_document):
         ).select_related("student__user")
     ]
     document_notice(
-        project, users + advisors(project), f"Versão {current.version} publicada pela Secretaria."
+        project, users + advisors(project), f"Versão {current.version} publicada pelo Administrador."
     )
     return publication

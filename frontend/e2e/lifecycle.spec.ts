@@ -9,7 +9,7 @@ const API=process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1'
 // Senha dos usuários de teste via ambiente (nunca versionada).
 const TEST_PASSWORD=process.env.E2E_TEST_PASSWORD ?? ''
 const STUDENT={identifier:'RA3001',password:TEST_PASSWORD}
-const SECRETARIAT={identifier:'secretaria.teste',password:TEST_PASSWORD}
+const ADMIN={identifier:'secretaria.teste',password:TEST_PASSWORD}
 function requirePassword(){
   if(!TEST_PASSWORD)throw new Error('Defina E2E_TEST_PASSWORD com a senha dos usuários de teste locais.')
 }
@@ -50,7 +50,7 @@ async function cancelAllActive(request:APIRequestContext){
     const body=await req.text()
     if(!req.ok()&&!body.includes('pendente'))throw new Error(`E2E solicitar cancelamento falhou: ${req.status()}`)
   }
-  const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+  const secToken=await apiLogin(request,ADMIN.identifier,ADMIN.password)
   for(const project of projects){
     const dec=await request.post(`${API}/projects/${project.id}/lifecycle/`,{headers:{'X-CSRFToken':secToken},data:{action:'approve-cancellation',reason:'Limpeza E2E'}})
     if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()}`)

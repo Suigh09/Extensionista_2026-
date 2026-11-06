@@ -23,7 +23,7 @@ def setup(academic_context):
     evaluator = APIClient()
     evaluator.force_authenticate(evaluator_user)
     secretary = User.objects.create_user(
-        username="secretary-grading", role="SECRETARIAT", password="test-password-123"
+        username="secretary-grading", role="ADMIN", password="test-password-123"
     )
     secretary_client = APIClient()
     secretary_client.force_authenticate(secretary)

@@ -54,7 +54,7 @@ export function UserBulkImport({user}:{user:{role:string}}){
           <tbody>
             <tr><td>aluno.demo01</td><td>STUDENT</td><td>Ana</td><td>Demo</td><td>ana.demo@exemplo.local</td><td>Uma-senha-segura-123</td><td>AD001</td><td>ADS</td><td>ADS-2026.2</td><td></td></tr>
             <tr><td>prof.demo01</td><td>PROFESSOR</td><td>Carlos</td><td>Demo</td><td>carlos.demo@exemplo.local</td><td>Uma-senha-segura-123</td><td></td><td></td><td></td><td>P001</td></tr>
-            <tr><td>sec.demo01</td><td>SECRETARIAT</td><td>Diana</td><td>Demo</td><td>diana.demo@exemplo.local</td><td>Uma-senha-segura-123</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td>sec.demo01</td><td>ADMIN</td><td>Diana</td><td>Demo</td><td>diana.demo@exemplo.local</td><td>Uma-senha-segura-123</td><td></td><td></td><td></td><td></td></tr>
           </tbody>
         </table>
       </div>

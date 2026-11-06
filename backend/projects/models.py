@@ -678,7 +678,7 @@ class PublicationDocument(models.Model):
         LEGACY = "LEGACY", "Documento anterior"
         ADVISOR = "ADVISOR", "Aguardando orientador"
         LEADER = "LEADER", "Aguardando validação do líder"
-        SECRETARIAT = "SECRETARIAT", "Aguardando Secretaria"
+        ADMIN = "ADMIN", "Aguardando Administrador"
         PUBLISHED = "PUBLISHED", "Publicado"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

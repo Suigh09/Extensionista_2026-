@@ -49,8 +49,8 @@ def create_student(username, ra):
 
 @pytest.mark.django_db
 @pytest.mark.integration
-def test_secretariat_manages_course_and_generates_audit():
-    client = authenticated(User.Role.SECRETARIAT)
+def test_admin_manages_course_and_generates_audit():
+    client = authenticated(User.Role.ADMIN)
     response = client.post(
         "/api/v1/academic/courses/",
         {"code": "ads", "name": "Análise e Desenvolvimento de Sistemas"},
@@ -143,7 +143,7 @@ def test_student_search_minimizes_personal_data():
 
 @pytest.mark.django_db
 @pytest.mark.integration
-def test_transfer_requires_secretariat_and_is_atomic():
+def test_transfer_requires_admin_and_is_atomic():
     owner_user, owner, _ = create_professor("source-professor")
     _, target, target_client = create_professor("target-professor")
     _, student, _ = create_student("transfer-student", "RA-TRANSFER")
@@ -161,7 +161,7 @@ def test_transfer_requires_secretariat_and_is_atomic():
     assert target_client.post(
         f"/api/v1/academic/room-transfer-requests/{transfer.pk}/approve/", {}, format="json"
     ).status_code == 403
-    secretary, secretary_client = create_actor("secretary-transfer", User.Role.SECRETARIAT)
+    admin, admin_client = create_actor("admin-transfer", User.Role.ADMIN)
     approved = secretary_client.post(
         f"/api/v1/academic/room-transfer-requests/{transfer.pk}/approve/",
         {"decision_note": "Transferência confirmada."}, format="json",
@@ -209,7 +209,7 @@ def test_closing_room_deactivates_memberships_and_preserves_history():
 
 @pytest.mark.django_db
 @pytest.mark.security
-def test_closing_room_invalidates_transfer_without_forging_secretariat_decision():
+def test_closing_room_invalidates_transfer_without_forging_admin_decision():
     source_user, source_professor, source_client = create_professor("source-close")
     _, destination_professor, _ = create_professor("destination-close")
     _, student, _ = create_student("student-close-transfer", "RA-CLOSE-TRANSFER")

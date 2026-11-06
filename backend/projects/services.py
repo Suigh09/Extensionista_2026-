@@ -43,7 +43,7 @@ def require_member(user, group):
 def can_access_project(user, project):
     if not user.is_active:
         return False
-    if user.role in {"ADMIN", "SECRETARIAT"}:
+    if user.role == "ADMIN":
         return True
     if user.role == "STUDENT":
         return GroupMember.objects.filter(
@@ -109,7 +109,7 @@ def leave_current_project(*, actor, student, target_project, confirmed):
             {
                 "detail": (
                     f"Você já participa do projeto vigente {old_project.name}. "
-                    "Solicite o cancelamento e aguarde a decisão da Secretaria."
+                    "Solicite o cancelamento e aguarde a decisão do Administrador."
                 ),
                 "code": "ACTIVE_PROJECT_CONFLICT",
                 "current_project": old_project.name,

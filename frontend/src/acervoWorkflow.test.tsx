@@ -6,7 +6,7 @@ import {actOnAcervoWorkflow,getAcervoWorkflow,listAcervoWorkflows,withdrawPublic
 
 vi.mock('./api',()=>({getAcervoWorkflow:vi.fn(),actOnAcervoWorkflow:vi.fn(),listAcervoWorkflows:vi.fn(),withdrawPublication:vi.fn(),publicationDocumentDownloadUrl:(id:string)=>`/pdf/${id}`}))
 afterEach(()=>{cleanup();vi.resetAllMocks()})
-const base:AcervoWorkflow={project:'p',project_name:'Projeto Ambiental',number:2,snapshot:{project_id:'p',project_name:'Projeto Ambiental',year:2026,advisors:['Orientador'],members:[{name:'Ana',course:'Computação'},{name:'Bia',course:'Computação'}]},blockers:[],permissions:{leader:true,advisor:false,secretariat:false},versions:[],state:'NOT_STARTED',publication:null,results:[{group:'g',name:'Grupo A',grade:'8.75',concluded:true,observations:'Boa apresentação',members:[{name:'Ana',ra:'RA1',present:true},{name:'Bia',ra:'RA2',present:false}]}]}
+const base:AcervoWorkflow={project:'p',project_name:'Projeto Ambiental',number:2,snapshot:{project_id:'p',project_name:'Projeto Ambiental',year:2026,advisors:['Orientador'],members:[{name:'Ana',course:'Computação'},{name:'Bia',course:'Computação'}]},blockers:[],permissions:{leader:true,advisor:false,admin:false},versions:[],state:'NOT_STARTED',publication:null,results:[{group:'g',name:'Grupo A',grade:'8.75',concluded:true,observations:'Boa apresentação',members:[{name:'Ana',ra:'RA1',present:true},{name:'Bia',ra:'RA2',present:false}]}]}
 const version={id:'v1',version:1,title:'Título original',abstract:'Resumo original',content:'Texto original',generated_by_name:'Ana',created_at:'2026-11-05T12:00:00Z',workflow:'ADVISOR',pdf_sha256:'hash'} as AcervoVersion
 
 describe('fluxo completo do acervo',()=>{
@@ -35,7 +35,7 @@ describe('fluxo completo do acervo',()=>{
   })
 
   it('orientador envia correção como nova versão e líder valida a versão exata',async()=>{
-    const advisor={...base,permissions:{leader:false,advisor:true,secretariat:false},state:'ADVISOR' as const,versions:[version]}
+    const advisor={...base,permissions:{leader:false,advisor:true,admin:false},state:'ADVISOR' as const,versions:[version]}
     vi.mocked(getAcervoWorkflow).mockResolvedValue(advisor)
     const second={...version,id:'v2',version:2,workflow:'LEADER' as const,content:'Texto revisado',generated_by_name:'Orientador'}
     vi.mocked(actOnAcervoWorkflow).mockResolvedValue({...advisor,state:'LEADER',versions:[second,version]})
@@ -47,29 +47,30 @@ describe('fluxo completo do acervo',()=>{
     expect(actOnAcervoWorkflow).toHaveBeenCalledWith('p',expect.objectContaining({action:'correct',expected_document:'v1',content:'Texto revisado'}))
     expect(await screen.findByText('Aguardando validação do líder')).toBeInTheDocument()
     mounted.unmount()
-    vi.mocked(getAcervoWorkflow).mockResolvedValue({...base,state:'LEADER',versions:[second,version]})
-    vi.mocked(actOnAcervoWorkflow).mockResolvedValue({...base,state:'SECRETARIAT',versions:[{...second,workflow:'SECRETARIAT'},version]})
+    const leaderState={...base,state:'LEADER' as const,permissions:{...base.permissions,leader:true},versions:[second,version]}
+    vi.mocked(getAcervoWorkflow).mockResolvedValue(leaderState)
+    vi.mocked(actOnAcervoWorkflow).mockResolvedValue({...leaderState,state:'ADMIN',versions:[{...second,workflow:'ADMIN'},version]})
     render(<AcervoWorkflowPanel projectId="p"/>)
-    await user.click(await screen.findByRole('button',{name:'Validar correção e encaminhar à Secretaria'}))
+    await user.click(await screen.findByRole('button',{name:'Validar correção e encaminhar ao Administrador'}))
     expect(actOnAcervoWorkflow).toHaveBeenLastCalledWith('p',{action:'accept',expected_document:'v2'})
-    expect(await screen.findByText('Aguardando confirmação da Secretaria')).toBeInTheDocument()
+    expect(await screen.findByText('Aguardando confirmação do Administrador')).toBeInTheDocument()
     expect(screen.getByText(/Versão 1 · Ana/)).toBeInTheDocument()
     expect(screen.getByRole('link',{name:'Baixar PDF da versão 2'})).toHaveAttribute('href','/pdf/v2')
   })
 
   it('somente Secretaria recebe confirmação de publicação',async()=>{
     vi.spyOn(window,'confirm').mockReturnValue(true)
-    const data={...base,state:'SECRETARIAT' as const,permissions:{leader:false,advisor:false,secretariat:true},versions:[{...version,workflow:'SECRETARIAT' as const}]}
+    const data={...base,state:'ADMIN' as const,permissions:{leader:false,advisor:false,admin:true},versions:[{...version,workflow:'ADMIN' as const}]}
     vi.mocked(getAcervoWorkflow).mockResolvedValue(data)
     vi.mocked(actOnAcervoWorkflow).mockResolvedValue({...data,state:'PUBLISHED',publication:'pub'})
     const user=userEvent.setup();render(<AcervoWorkflowPanel projectId="p"/>)
     await user.click(await screen.findByRole('button',{name:'Confirmar publicação no acervo'}))
     expect(actOnAcervoWorkflow).toHaveBeenCalledWith('p',{action:'publish',expected_document:'v1'})
-    expect(await screen.findByText('Publicação confirmada pela Secretaria.')).toBeInTheDocument()
+    expect(await screen.findByText('Publicação confirmada pelo Administrador.')).toBeInTheDocument()
   })
 
   it('bloqueia integrante não líder e mostra os pré-requisitos reais',async()=>{
-    vi.mocked(getAcervoWorkflow).mockResolvedValue({...base,permissions:{leader:false,advisor:false,secretariat:false},blockers:['Falta concluir a avaliação do grupo.']})
+    vi.mocked(getAcervoWorkflow).mockResolvedValue({...base,permissions:{leader:false,advisor:false,admin:false},blockers:['Falta concluir a avaliação do grupo.']})
     render(<AcervoWorkflowPanel projectId="p"/>)
     expect(await screen.findByText('Falta concluir a avaliação do grupo.')).toBeInTheDocument()
     expect(screen.queryByRole('button',{name:'Gerar PDF e enviar ao orientador'})).not.toBeInTheDocument()
@@ -89,13 +90,13 @@ describe('fluxo completo do acervo',()=>{
   })
 
   it('fila oferece acesso direto ao fluxo de cada projeto',async()=>{
-    vi.mocked(listAcervoWorkflows).mockResolvedValue([{id:'p',name:'Projeto Ambiental',number:2,state:'SECRETARIAT'}])
+    vi.mocked(listAcervoWorkflows).mockResolvedValue([{id:'p',name:'Projeto Ambiental',number:2,state:'ADMIN'}])
     render(<AcervoWorkflowPage/>)
     expect(await screen.findByRole('link',{name:'Publicar no Acervo'})).toHaveAttribute('href','#/publication/p')
   })
 
-  it('preserva a retirada pela Secretaria sem permitir nova publicação',async()=>{
-    const published={...base,permissions:{leader:false,advisor:false,secretariat:true},publication:'pub',state:'PUBLISHED' as const,versions:[{...version,workflow:'PUBLISHED' as const}]}
+  it('preserva a retirada pelo Administrador sem permitir nova publicação',async()=>{
+    const published={...base,permissions:{leader:false,advisor:false,admin:true},publication:'pub',state:'PUBLISHED' as const,versions:[{...version,workflow:'PUBLISHED' as const}]}
     vi.mocked(getAcervoWorkflow).mockResolvedValueOnce(published).mockResolvedValueOnce({...published,state:'WITHDRAWN'})
     vi.mocked(withdrawPublication).mockResolvedValue({id:'pub',withdrawn_at:'2026-11-05T14:00:00Z'} as Publication)
     const user=userEvent.setup();render(<AcervoWorkflowPanel projectId="p"/>)

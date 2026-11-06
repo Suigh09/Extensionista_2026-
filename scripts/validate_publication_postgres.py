@@ -66,7 +66,7 @@ def run_flows():
     from projects.showcase import create_showcase_entry, record_member_attendance
     from rest_framework.exceptions import ValidationError
 
-    secretary = User.objects.create_user(username="temporary-secretary", role="SECRETARIAT")
+    secretary = User.objects.create_user(username="temporary-secretary", role="ADMIN")
     advisor = User.objects.create_user(username="temporary-advisor", role="PROFESSOR")
     advisor_profile = ProfessorProfile.objects.create(user=advisor, registration="TEMP-A")
     evaluator = User.objects.create_user(username="temporary-evaluator", role="PROFESSOR")

@@ -13,7 +13,7 @@ function requirePassword(){
 const ALUNO1={identifier:'RA3001',password:PASSWORD}
 const ALUNO2={identifier:'RA3002',password:PASSWORD}
 const PROFESSOR={identifier:'prof.teste1',password:PASSWORD}
-const SECRETARIAT={identifier:'secretaria.teste',password:PASSWORD}
+const ADMIN={identifier:'secretaria.teste',password:PASSWORD}
 const PROJECT_NAME=`Projeto E2E ${Date.now()}`
 
 type ProjectSummary={id:string;status:string}
@@ -55,7 +55,7 @@ async function cancelActive(request:APIRequestContext,identifier:string){
     const body=await req.text()
     if(!req.ok()&&!body.includes('pendente'))throw new Error(`E2E solicitar cancelamento falhou: ${req.status()} ${body.slice(0,200)}`)
   }
-  const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+  const secToken=await apiLogin(request,ADMIN.identifier,ADMIN.password)
   for(const project of actives){
     const dec=await request.post(`${API}/projects/${project.id}/lifecycle/`,{headers:{'X-CSRFToken':secToken},data:{action:'approve-cancellation',reason:'Limpeza E2E'}})
     if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()} ${(await dec.text()).slice(0,200)}`)
@@ -165,7 +165,7 @@ test('entrega formal até a secretaria',async({page,request})=>{
   await expect(page.getByText('Projeto encaminhado à secretaria.')).toBeVisible()
   await uiLogout(page)
 
-  await uiLogin(page,SECRETARIAT.identifier)
+  await uiLogin(page,ADMIN.identifier)
   await page.getByRole('button',{name:'Projetos'}).first().click()
   await expect(page.getByText('Recebidos da orientação')).toBeVisible()
   const card=page.locator('article').filter({has:page.getByRole('heading',{name:PROJECT_NAME,exact:true})})

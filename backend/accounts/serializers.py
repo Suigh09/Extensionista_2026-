@@ -254,7 +254,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             return f"#/projects/{item.project_id}"
         if item.kind in {"ROOM_INCLUDED", "ROOM_TRANSFER_REQUESTED", "ROOM_TRANSFER_DECIDED"}:
             role = item.user.role
-            if role in {"ADMIN", "SECRETARIAT"}:
+            if role == "ADMIN":
                 return "#/admin"
             return "#/rooms" if role == "PROFESSOR" else "#/profile"
         return None

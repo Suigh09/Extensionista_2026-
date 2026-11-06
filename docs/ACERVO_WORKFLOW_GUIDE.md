@@ -4,7 +4,7 @@
 
 Abrir **Publicação no acervo** na navegação, escolher o projeto e usar
 **Publicar no Acervo**. Essa área está disponível para aluno, orientador,
-avaliador, Secretaria e Admin, com ações autorizadas pelo backend.
+avaliador e Administrador, com ações autorizadas pelo backend.
 As rotas antigas de formulário/documento abrem a mesma interface.
 
 ## Pré-requisitos
@@ -100,11 +100,10 @@ Na etapa **Aguardando validação do líder**, ler a versão revisada, consultar
 histórico e baixar o PDF. **Validar correção e encaminhar à Secretaria** aceita
 exatamente essa versão. Outro integrante não pode validar no lugar do líder.
 
-## 6. Secretaria confirma a publicação
+## 6. Administrador confirma a publicação
 
-Na etapa **Aguardando confirmação da Secretaria**, conferir a versão aprovada e
-clicar **Confirmar publicação no acervo**, confirmando a ação. Admin da aplicação
-também pode executar essa rotina institucional, sem privilégios Django extras.
+Na etapa **Aguardando confirmação do Administrador**, conferir a versão aprovada e
+clicar **Confirmar publicação no acervo**, confirmando a ação.
 
 Só esse ato cria a publicação visível no acervo. Tentativas por aluno/orientador,
 versão antiga ou etapa antecipada são bloqueadas pela API, inclusive na URL antiga.
@@ -122,7 +121,7 @@ autor, data, revisão/aceite e hash SHA-256 do PDF. Aprovação/aceite e respons
 pela confirmação são registrados; publicações anteriores não recebem autoria
 fictícia na migração.
 
-A Secretaria/Admin pode usar **Retirar publicação**, informando o motivo.
+O Administrador pode usar **Retirar publicação**, informando o motivo.
 A retirada preserva documentos e histórico e remove o item do acervo consultável.
 Não há republicação do mesmo projeto, conforme regra anterior.
 

@@ -42,7 +42,7 @@ class Command(BaseCommand):
             ("ra3001", User.Role.STUDENT),
             ("ra3002", User.Role.STUDENT),
             ("prof.teste1", User.Role.PROFESSOR),
-            ("secretaria.teste", User.Role.SECRETARIAT),
+            ("secretaria.teste", User.Role.ADMIN),
             ("avaliador.e2e.acervo", User.Role.PROFESSOR),
         ):
             user, created = User.objects.get_or_create(

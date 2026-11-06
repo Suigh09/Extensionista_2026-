@@ -55,7 +55,7 @@ def workflow_data(actor, project):
         "permissions": {
             "leader": is_leader(actor, project),
             "advisor": is_advisor(actor, project),
-            "secretariat": actor.role in {"ADMIN", "SECRETARIAT"},
+            "secretariat": actor.role == "ADMIN",
         },
         "versions": PublicationDocumentSerializer(versions, many=True).data,
         "state": "WITHDRAWN"

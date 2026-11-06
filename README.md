@@ -64,14 +64,14 @@ pendências atuais em `docs/HANDOFF.md`.
 
 - Publicação completa: [guia do fluxo do acervo](docs/ACERVO_WORKFLOW_GUIDE.md).
   Líder gera PDF pelo formulário; orientador aprova ou corrige com aceite do líder;
-  Secretaria confirma a versão final. Resultados da Mostra chegam ao orientador.
+  Administrador confirma a versão final. Resultados da Mostra chegam ao orientador.
 - Teste integrado isolado (Vite ativo, Docker disponível):
   `.venv/Scripts/python.exe scripts/validate_acervo_live.py`. Usa PostgreSQL UUID
   descartável/API na porta 8002; não realiza atos no banco normal.
 - Runner backend local: `.venv/Scripts/python.exe scripts/validate_backend.py`;
   carrega ambiente e executa pytest em SQLite isolado, incluindo todos os testes.
 
-- Agenda da Mostra: [guia de locais, datas, quadro visual e busca](docs/SHOWCASE_PLANNING_GUIDE.md). Secretaria/Admin cadastram locais, dias e agendam grupos encaminhados. Notificações abrem o destino correspondente e projetos possuem número curto visível, preservando UUIDs internos.
+- Agenda da Mostra: [guia de locais, datas, quadro visual e busca](docs/SHOWCASE_PLANNING_GUIDE.md). Administrador cadastra locais, dias e agendam grupos encaminhados. Notificações abrem o destino correspondente e projetos possuem número curto visível, preservando UUIDs internos.
 - **Uso normal no Windows:** abrir `Iniciar Plataforma.bat`, com Docker Desktop em execução e Node.js/npm instalados. Acesso único: `http://127.0.0.1:5173/`.
 - Backend + PostgreSQL rodam no Docker; a interface Vite roda localmente e encaminha `/api` ao backend Docker. Não há fallback para SQLite. O inicializador reconstrói a imagem backend com o código atual e aguarda os serviços ficarem saudáveis.
 - `Parar Plataforma.bat` encerra a interface identificada e para os serviços Compose, preservando volumes e uploads. Os atalhos `backend/run_server.bat` e `frontend/start_dev.bat` seguem o mesmo backend Docker.

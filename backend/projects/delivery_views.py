@@ -119,7 +119,7 @@ class ForwardedQueueView(generics.ListAPIView):
 
     def get_queryset(self):
         if not is_admin(self.request.user):
-            raise PermissionDenied("Área disponível à Secretaria/Admin.")
+            raise PermissionDenied("Área disponível ao Administrador.")
         return ProjectForwarding.objects.select_related(
             "project", "forwarded_by"
         ).order_by("-forwarded_at", "project_id")

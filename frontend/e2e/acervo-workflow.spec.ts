@@ -6,10 +6,10 @@ for(const correction of [false,true])test(`acervo completo: ${correction?'corre�
   const errors:string[]=[]
   page.on('pageerror',error=>errors.push(error.message))
   page.on('dialog',dialog=>dialog.accept())
-  function data(){return {project:'project',project_name:'Projeto Ambiental',number:2,state,blockers:[],snapshot:{project_id:'project',project_name:'Projeto Ambiental',year:2026,advisors:['Orientador'],members:[{name:'Ana',course:'Computação'},{name:'Bia',course:'Computação'}]},permissions:{leader:actor==='leader',advisor:actor==='advisor',secretariat:actor==='secretary'},versions,publication:state==='PUBLISHED'?'pub':null,results:[{group:'group',name:'Grupo A',grade:'8.75',concluded:true,observations:'Trabalho consistente.',members:[{name:'Ana',ra:'RA4001',present:true},{name:'Bia',ra:'RA4002',present:false}]}]}}
+  function data(){return {project:'project',project_name:'Projeto Ambiental',number:2,state,blockers:[],snapshot:{project_id:'project',project_name:'Projeto Ambiental',year:2026,advisors:['Orientador'],members:[{name:'Ana',course:'Computação'},{name:'Bia',course:'Computação'}]},permissions:{leader:actor==='leader',advisor:actor==='advisor',admin:actor==='secretary'},versions,publication:state==='PUBLISHED'?'pub':null,results:[{group:'group',name:'Grupo A',grade:'8.75',concluded:true,observations:'Trabalho consistente.',members:[{name:'Ana',ra:'RA4001',present:true},{name:'Bia',ra:'RA4002',present:false}]}]}}
   await page.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname
-    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:actor,username:actor,name:actor==='leader'?'Ana':actor==='advisor'?'Orientador':'Secretaria',role:actor==='leader'?'STUDENT':actor==='advisor'?'PROFESSOR':'SECRETARIAT',profile:{}}})
+    if(path.endsWith('/auth/session/'))return route.fulfill({json:{id:actor,username:actor,name:actor==='leader'?'Ana':actor==='advisor'?'Orientador':'Administrador',role:actor==='leader'?'STUDENT':actor==='advisor'?'PROFESSOR':'ADMIN',profile:{}}})
     if(path.endsWith('/auth/csrf/'))return route.fulfill({json:{csrfToken:'test-csrf'}})
     if(path.endsWith('/publication-workflow/')){
       if(route.request().method()==='POST'){
@@ -21,11 +21,11 @@ for(const correction of [false,true])test(`acervo completo: ${correction?'corre�
           expect(actor).toBe('advisor');expect(payload.expected_document).toBe('v1')
           state='LEADER';versions.unshift({...versions[0],id:'v2',version:2,content:payload.content,workflow:state,generated_by_name:'Orientador',pdf_sha256:'hash-v2'})
         }else if(payload.action==='approve'){
-          expect(actor).toBe('advisor');expect(payload.expected_document).toBe('v1');state='SECRETARIAT';versions[0].workflow=state
+          expect(actor).toBe('advisor');expect(payload.expected_document).toBe('v1');state='ADMIN';versions[0].workflow=state
         }else if(payload.action==='accept'){
-          expect(actor).toBe('leader');expect(payload.expected_document).toBe('v2');state='SECRETARIAT';versions[0].workflow=state
+          expect(actor).toBe('leader');expect(payload.expected_document).toBe('v2');state='ADMIN';versions[0].workflow=state
         }else if(payload.action==='publish'){
-          expect(actor).toBe('secretary');expect(state).toBe('SECRETARIAT');expect(payload.expected_document).toBe(correction?'v2':'v1');state='PUBLISHED';versions[0].workflow=state
+          expect(actor).toBe('secretary');expect(state).toBe('ADMIN');expect(payload.expected_document).toBe(correction?'v2':'v1');state='PUBLISHED';versions[0].workflow=state
         }else throw new Error('Ação inesperada')
       }
       return route.fulfill({json:data()})
@@ -48,14 +48,14 @@ for(const correction of [false,true])test(`acervo completo: ${correction?'corre�
     await expect(page.getByText('Aguardando validação do líder',{exact:true})).toBeVisible()
     actor='leader';await page.reload()
     await expect(page.getByText('Texto escrito pelo líder.',{exact:true})).toHaveCount(1)
-    await page.getByRole('button',{name:'Validar correção e encaminhar à Secretaria'}).click()
+    await page.getByRole('button',{name:'Validar correção e encaminhar ao Administrador'}).click()
   }else await page.getByRole('button',{name:'Aprovar sem alterações'}).click()
-  await expect(page.getByText('Aguardando confirmação da Secretaria',{exact:true})).toBeVisible()
+  await expect(page.getByText('Aguardando confirmação do Administrador',{exact:true})).toBeVisible()
   actor='secretary';await page.reload()
   await expect(page.getByRole('link',{name:`Baixar PDF da versão ${correction?2:1}`})).toBeVisible()
   await page.screenshot({path:`../.runtime/acervo-${correction?'corrected':'direct'}-${testInfo.project.name}.png`,fullPage:true})
   await page.getByRole('button',{name:'Confirmar publicação no acervo'}).click()
-  await expect(page.getByText('Publicação confirmada pela Secretaria.')).toBeVisible()
+  await expect(page.getByText('Publicação confirmada pelo Administrador.')).toBeVisible()
   await page.reload()
   await expect(page.getByText('Publicado no acervo',{exact:true})).toBeVisible()
   expect(writes).toBe(correction?4:3)

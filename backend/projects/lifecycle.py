@@ -22,7 +22,7 @@ EDITABLE = {Project.Status.DRAFT, Project.Status.CHANGES_REQUESTED}
 
 
 def is_admin(user):
-    return user.is_active and user.role in {"ADMIN", "SECRETARIAT"}
+    return user.is_active and user.role == "ADMIN"
 
 
 def require_room_manager(user, room):
@@ -65,7 +65,7 @@ def reserve_student(student, group):
                 "code": "ACTIVE_PROJECT_CONFLICT",
                 "detail": (
                     "Aluno já possui um grupo vigente. "
-                    "Solicite o cancelamento e aguarde a decisão da Secretaria."
+                    "Solicite o cancelamento e aguarde a decisão do Administrador."
                 ),
             }
         )
@@ -108,7 +108,7 @@ def create_from_theme(*, actor, theme_id, name, about, leader_id=None, student_i
                 "code": "ACTIVE_PROJECT_CONFLICT",
                 "detail": (
                     "Você já possui um grupo vigente. "
-                    "Aguarde o cancelamento pela Secretaria antes de criar outro projeto."
+                    "Aguarde o cancelamento pelo Administrador antes de criar outro projeto."
                 ),
             }
         )
@@ -274,7 +274,7 @@ def transition(*, actor, project, action, reason):
         record_event(actor, project, "REQUEST_CANCELLATION", before, before, reason)
     elif action in {"cancel", "approve-cancellation", "decline-cancellation"}:
         if not is_admin(actor):
-            raise PermissionDenied("Somente Secretaria/Admin pode decidir o cancelamento.")
+            raise PermissionDenied("Somente o Administrador pode decidir o cancelamento.")
         pending = project.cancellation_requests.select_for_update().filter(status="PENDING").first()
         if action != "cancel" and not pending:
             raise ValidationError("Não há solicitação pendente para decidir.")

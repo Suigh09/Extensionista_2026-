@@ -3,7 +3,7 @@
 Legenda: `E` executa; `C` consulta; `D` decide/aprova; `-` sem permissão; `PLN` planejado.
 Todas as permissões dependem de autenticação quando aplicável e de autorização por objeto no backend.
 
-| ID | Funcionalidade | Aluno | Professor | Secretaria | Admin | Avaliador contextual | Público | Estado | Regras/observações |
+| ID | Funcionalidade | Aluno | Professor | Administrador | Avaliador contextual | Público | Estado | Regras/observações |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
 | UC-001 | Autenticar e encerrar sessão | E | E | E | E | E | - | IMP | bloqueio progressivo; sessão e CSRF |
 | UC-002 | Consultar o próprio perfil | C | C | C | C | C | - | IMP | dados minimizados por papel |
@@ -33,6 +33,6 @@ Todas as permissões dependem de autenticação quando aplicável e de autoriza�
 
 - Ocultar um botão não concede segurança: todo caso de uso mutável exige autorização no backend.
 - Professor acessa somente objetos para os quais possui vínculo contextual.
-- Secretaria e administrador não recebem acesso irrestrito a dados pessoais além do necessário.
+- O Administrador não recebe acesso irrestrito a dados pessoais além do necessário.
 - Downloads e anexos exigem autorização por objeto; nomes armazenados são aleatórios e seguros.
 - Ações acadêmicas relevantes devem produzir evento de auditoria sem segredos ou dados excessivos.

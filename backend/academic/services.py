@@ -92,7 +92,7 @@ def pull_student(*, actor, room, student):
             locked_student.user,
             Notification.Kind.ROOM_TRANSFER_REQUESTED,
             f"Transferência para {locked_room.name}",
-            "Sua transferência foi enviada à secretaria.",
+            "Sua transferência foi enviada ao administrador.",
         )
         notify(
             institutional_staff(),
@@ -122,8 +122,8 @@ def pull_student(*, actor, room, student):
 
 @transaction.atomic
 def decide_transfer(*, actor, transfer, approve, note=""):
-    if not actor.is_active or actor.role not in {"SECRETARIAT", "ADMIN"}:
-        raise PermissionDenied("Somente a secretaria pode decidir transferências.")
+    if not actor.is_active or actor.role != "ADMIN":
+        raise PermissionDenied("Somente o Administrador pode decidir transferências.")
     locked = (
         RoomTransferRequest.objects.select_for_update()
         .select_related("student", "source_room", "destination_room")

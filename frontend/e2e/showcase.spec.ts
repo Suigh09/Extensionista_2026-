@@ -7,7 +7,7 @@ function requirePassword(){
 }
 const ALUNO={identifier:'RA3001',password:PASSWORD}
 const ORIENTADOR={identifier:'prof.teste1',password:PASSWORD}
-const SECRETARIAT={identifier:'secretaria.teste',password:PASSWORD}
+const ADMIN={identifier:'secretaria.teste',password:PASSWORD}
 
 async function backendAvailable(request:APIRequestContext){
   try{
@@ -47,7 +47,7 @@ async function cancelActive(request:APIRequestContext,identifier:string){
   await apiLogin(request,identifier,PASSWORD)
   const actives=await userProjects(request)
   if(actives.length===0)return
-  const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+  const secToken=await apiLogin(request,ADMIN.identifier,ADMIN.password)
   for(const project of actives){
     const dec=await request.post(`${API}/projects/${project.id}/lifecycle/`,{headers:{'X-CSRFToken':secToken},data:{action:'cancel',reason:'Finalização dos projetos sintéticos E2E de acervo'}})
     if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()} ${await dec.text()}`)
@@ -109,7 +109,7 @@ test('GF-09: publicacao anonima no acervo',async({page,browser,baseURL})=>{
   const projectId=await prepareApprovedProject(request,projectName)
   const documentId=await preparePublication(request,projectId,true)
   // page.request compartilha os cookies do contexto do navegador.
-   await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+   await apiLogin(request,ADMIN.identifier,ADMIN.password)
    await page.goto(`/#/publication/${projectId}`)
    await expect(page.getByText('Aguardando confirmação da Secretaria',{exact:true})).toBeVisible()
    page.once('dialog',dialog=>dialog.accept())
@@ -170,7 +170,7 @@ async function preparePublication(request:APIRequestContext,projectId:string,app
   await apiLogin(request,ORIENTADOR.identifier,PASSWORD)
   await post(request,`deliveries/${delivery.id}/review/`,{decision:'APPROVED',feedback:'Entrega E2E validada'})
   await post(request,`${projectId}/forward/`,{required_competencies:'Extensão',observations:'Encaminhamento E2E'})
-  await apiLogin(request,SECRETARIAT.identifier,PASSWORD)
+  await apiLogin(request,ADMIN.identifier,PASSWORD)
   const project=await json(await request.get(`${API}/projects/${projectId}/`))
   const recommendations=await json(await request.get(`${API}/projects/${projectId}/evaluator-recommendations/`))
   const evaluator=recommendations.recommendations.find((p:{name:string})=>p.name==='Avaliador E2E Acervo')

@@ -19,7 +19,7 @@ def setup(academic_context):
     teacher.force_authenticate(room.responsible_professor.user)
     secretary = User.objects.create_user(
         username="secretary-notifications",
-        role="SECRETARIAT",
+        role="ADMIN",
         password="test-password-123",
     )
     secretary_client = APIClient()
@@ -120,7 +120,7 @@ def test_room_pull_transfer_and_decision_notify(academic_context):
     assert requested.status_code == 202
     assert unread(second.user, Notification.Kind.ROOM_TRANSFER_REQUESTED).count() == 1
     assert Notification.objects.filter(
-        user__role="SECRETARIAT",
+        user__role="ADMIN",
         kind=Notification.Kind.ROOM_TRANSFER_REQUESTED,
     ).exists()
 
@@ -203,5 +203,5 @@ def test_review_delivery_and_forward_notify(academic_context):
     )
     assert forwarded.status_code == 201, forwarded.content
     assert Notification.objects.filter(
-        user__role="SECRETARIAT", kind=Notification.Kind.PROJECT_FORWARDED
+        user__role="ADMIN", kind=Notification.Kind.PROJECT_FORWARDED
     ).exists()

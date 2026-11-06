@@ -75,7 +75,7 @@
   regex ASCII em smoke test evita falso negativo de seletor. Não regravar dados
   acadêmicos por conveniência de encoding.
 
-- Regra esclarecida pelo usuário em 05/11/2026: Admin também inclui Secretaria nos cadastros de locais da Mostra. Reutilizar require_showcase_staff, sem condição ADMIN-only nem promoção da conta Secretaria. ADMIN da aplicação não implica is_superuser/is_staff do Django.
+- Perfis Secretaria e Admin unificados no perfil **Administrador** (`ADMIN`). Todas as verificações de permissão agora usam `role == "ADMIN"`. Usuários previamente cadastrados como `SECRETARIAT` foram convertidos via migração `0008_convert_secretariat_to_admin`.
 - Desde 05/11/2026, uso normal é PostgreSQL Docker + Vite local, não Django local. Não forçar SQLite nos atalhos nem tratar `health` 200 isoladamente como prova do banco correto. O helper verifica `connection.vendor` e abre conexão real no container.
 - A senha de `.env.e2e` inicialmente não correspondia à conta sintética `ra3001` no PostgreSQL (05/11/2026). Resolvido após autorização explícita: cinco contas sintéticas redefinidas para a credencial local existente, com backup DPAPI dos hashes e cinco logins HTTP validados. Não supor sincronização de senhas entre bancos nem rotacionar sem autorização; entregar credenciais sem publicá-las no chat/logs.
 - PIDs antigos em `.runtime/processes.json` podem ter sido reutilizados: só parar o Node registrado se PID, instante de criação e caminho do Vite corresponderem. Registros antigos não autorizam matar processos.
@@ -200,7 +200,7 @@
 
 ## Importação em massa via CSV (concluída)
 
-- Endpoint `POST /api/v1/auth/users/import-csv/` (apenas Admin/Secretaria).
+- Endpoint `POST /api/v1/auth/users/import-csv/` (apenas Admin).
 - Formato CSV: `username,role,first_name,last_name,email,password,ra,course_code,class_offering_code,registration`.
 - Validação por linha com transação atômica (rollback se houver erro).
 - Arquivo de exemplo: `backend/accounts/management/commands/example_users_import.csv`.
@@ -215,7 +215,7 @@
 - URLs `projects/showcase-sessions/` e `projects/showcase-sessions/<uuid:session_id>/` em `backend/projects/urls.py`.
 - Componente frontend `frontend/src/showcaseScheduler.tsx` com formulário de agendamento (data/hora início/fim, local), listagem em tabela e remoção de sessões.
 - Funções de API em `frontend/src/api.ts`: `listShowcaseSessions`, `createShowcaseSession`, `updateShowcaseSession`, `deleteShowcaseSession`.
-- Rota `showcase-schedule` adicionada ao `App.tsx` (apenas para role SECRETARIAT na navegação).
+- Rota `showcase-schedule` adicionada ao `App.tsx` (apenas para role ADMIN na navegação).
 - 38 testes passando (test_showcase.py + test_projects.py), build frontend OK, ruff OK, lint OK.
 
 - Os 38 testes anteriores não comprovavam o protótipo. Agora existe uma única interface `ShowcaseScheduler` e fonte `ShowcaseEntry`, com dias/locais cadastrados, arrastar/redimensionar e testes específicos. Modelo antigo preservado sem uso; o inventário PostgreSQL tinha zero sessões de protótipo.

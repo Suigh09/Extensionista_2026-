@@ -12,7 +12,7 @@ from .test_projects import academic_context, create_project  # noqa: F401
 def admin_client():
     user = User.objects.create_user(
         username="secretary-lifecycle",
-        role="SECRETARIAT",
+        role="ADMIN",
         password="test-password-123",
     )
     client = APIClient()

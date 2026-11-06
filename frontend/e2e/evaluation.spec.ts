@@ -10,7 +10,7 @@ const ALUNO1={identifier:'RA3001',password:PASSWORD}
 const ALUNO2={identifier:'RA3002',password:PASSWORD}
 const PROFESSOR={identifier:'prof.teste1',password:PASSWORD}
 const EVALUATOR={identifier:'prof.teste3',password:PASSWORD}
-const SECRETARIAT={identifier:'secretaria.teste',password:PASSWORD}
+const ADMIN={identifier:'secretaria.teste',password:PASSWORD}
 const PROJECT_NAME=`Projeto E2E Avalia ${Date.now()}`
 
 function requirePassword(){
@@ -54,7 +54,7 @@ async function cancelActive(request:APIRequestContext,identifier:string){
     const body=await req.text()
     if(!req.ok()&&!body.includes('pendente'))throw new Error(`E2E solicitar cancelamento falhou: ${req.status()}`)
   }
-  const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+  const secToken=await apiLogin(request,ADMIN.identifier,ADMIN.password)
   for(const project of actives){
     const dec=await request.post(`${API}/projects/${project.id}/lifecycle/`,{headers:{'X-CSRFToken':secToken},data:{action:'approve-cancellation',reason:'Limpeza E2E'}})
     if(!dec.ok())throw new Error(`E2E aprovar cancelamento falhou: ${dec.status()}`)
@@ -100,7 +100,7 @@ async function prepareEvaluated(request:APIRequestContext){
   const forward=await request.post(`${API}/projects/${project.id}/forward/`,{headers:{'X-CSRFToken':profToken2},data:{observations:'Turma dedicada.',required_competencies:'Metodologia.'}})
   if(!forward.ok())throw new Error(`E2E encaminhar falhou: ${forward.status()} ${(await forward.text()).slice(0,200)}`)
 
-  const secToken=await apiLogin(request,SECRETARIAT.identifier,SECRETARIAT.password)
+  const secToken=await apiLogin(request,ADMIN.identifier,ADMIN.password)
   const groups=await(await request.get(`${API}/projects/${project.id}/evaluator-recommendations/`,{headers:{'X-CSRFToken':secToken}})).json() as {groups:{group_id:string}[]}
   if(groups.groups.length===0)throw new Error('E2E nenhum grupo ativo para designar avaliador')
   const groupId=groups.groups[0].group_id

@@ -236,7 +236,7 @@ export function PublicationPanel({project,user}:{project:Project;user:Profile}){
   const[publishing,setPublishing]=useState<{project:string;document:string}|null>(null)
   const[approvedDocs,setApprovedDocs]=useState<PublicationDocument[]>([])
   const student=user.role==='STUDENT'
-  const secretariat=user.role==='SECRETARIAT'||user.role==='ADMIN'
+  const secretariat=user.role==='ADMIN'
   const isMember=project.groups?.some(group=>group.members.some(member=>member.user_id===user.id))??false
   const refresh=useCallback(async()=>{
     setBusy(true)
@@ -434,7 +434,7 @@ export function EvaluationsPage({user}:{user:Profile}){
   const[projects,setProjects]=useState<Project[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true)
   async function refresh(){setBusy(true);try{const data=await listProfessorProjects();setProjects(data.filter(p=>p.status==='APPROVED'&&p.group))}catch(e){setMessage(failure(e))}finally{setBusy(false)}}
   useEffect(()=>{void refresh()},[])
-  if(user.role!=='PROFESSOR'&&user.role!=='ADMIN'&&user.role!=='SECRETARIAT')return null
+  if(user.role!=='PROFESSOR'&&user.role!=='ADMIN')return null
   return (
     <section className="profile-section" aria-labelledby="evaluations-title">
       <div className="showcase-header"><div><span className="eyebrow">Avaliação</span><h2 id="evaluations-title">Avaliações de grupo</h2><p>Avalie projetos aprovados e encaminhados à secretaria.</p></div></div>

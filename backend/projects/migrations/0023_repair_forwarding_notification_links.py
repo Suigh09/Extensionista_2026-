@@ -13,7 +13,7 @@ def repair_links(apps, schema_editor):
     notifications = Notification.objects.using(database).filter(
         kind="PROJECT_FORWARDED",
         project__isnull=True,
-        user__role__in=["ADMIN", "SECRETARIAT"],
+        user__role__in=["ADMIN"],
     )
     for item in notifications.iterator():
         candidates = matches.get(item.title, [])

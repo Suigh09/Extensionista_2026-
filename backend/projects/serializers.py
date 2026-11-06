@@ -1013,7 +1013,7 @@ class ShowcaseSessionSerializer(serializers.ModelSerializer):
         user = getattr(self.context.get("request"), "user", None)
         if not user or not user.is_authenticated:
             return False
-        if user.role in ("ADMIN", "SECRETARIAT"):
+        if user.role == "ADMIN":
             return True
         if user.role == "PROFESSOR":
             profile = getattr(user, "professor_profile", None)

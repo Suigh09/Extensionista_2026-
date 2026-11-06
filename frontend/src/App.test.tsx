@@ -60,7 +60,7 @@ describe('App',()=>{
     window.history.replaceState({},'',`/#/${route}`)
     vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
       const url=String(input)
-      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify({...student,role:'SECRETARIAT'}))
+      if(url.endsWith('/auth/session/'))return new Response(JSON.stringify({...student,role:'ADMIN'}))
       if(url.includes('/showcase-planning/'))return new Response(JSON.stringify({days:[],rooms:[],buildings:[],groups:[],entries:[]}))
       return new Response('[]')
     })
@@ -72,14 +72,14 @@ describe('App',()=>{
   })
   it('acervo renderiza uma única pesquisa',async()=>{
     window.history.replaceState({},'','/#/archive')
-    vi.spyOn(globalThis,'fetch').mockImplementation(async input=>String(input).endsWith('/auth/session/')?new Response(JSON.stringify({...student,role:'SECRETARIAT'})):new Response('[]'))
+    vi.spyOn(globalThis,'fetch').mockImplementation(async input=>String(input).endsWith('/auth/session/')?new Response(JSON.stringify({...student,role:'ADMIN'})):new Response('[]'))
     render(<App/>)
     expect(await screen.findAllByText('Acervo de projetos publicados',{selector:'h2'})).toHaveLength(1)
     expect(screen.getAllByText('Pesquisar',{selector:'button'})).toHaveLength(1)
   })
   it.each(['link direto','clique na lista'])('carrega o fluxo real e respeita a representação do líder por %s',async mode=>{
     const projectId='b73ce311-c50c-419e-8ba6-f3c1a5332e15'
-    const workflow={project:projectId,project_name:'Projeto real',number:2,state:'NOT_STARTED',blockers:[],versions:[],results:[],publication:null,permissions:{leader:true,advisor:false,secretariat:false},snapshot:{project_id:projectId,project_name:'Projeto real',year:2026,advisors:['Orientador'],members:[{name:'Aluno Teste',course:'Computação'}]}}
+    const workflow={project:projectId,project_name:'Projeto real',number:2,state:'NOT_STARTED',blockers:[],versions:[],results:[],publication:null,permissions:{leader:true,advisor:false,admin:false},snapshot:{project_id:projectId,project_name:'Projeto real',year:2026,advisors:['Orientador'],members:[{name:'Aluno Teste',course:'Computação'}]}}
     window.history.replaceState({},'',mode==='link direto'?`/#/publication/${projectId}`:'/#/publication')
     const fetch=vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
       const url=String(input)
@@ -312,7 +312,7 @@ describe('App',()=>{
   })
 
   it('secretaria aprova solicitação de transferência com origem e destino',async()=>{
-    const secretary={id:'s1',username:'secretaria',name:'Secretaria',email:'',role:'SECRETARIAT',profile:null}
+    const secretary={id:'s1',username:'secretaria',name:'Secretaria',email:'',role:'ADMIN',profile:null}
     const request={id:'transfer-1',student_name:'Aluno Dois',student_ra:'RA2',source_room_name:'Sala Anterior',destination_room_name:'Sala de Projetos',source_professor_name:'Professor 2',destination_professor_name:'Professor 1',status:'PENDING',created_at:'2026-08-26T12:00:00Z'}
     let approved=false
     vi.spyOn(globalThis,'fetch').mockImplementation(async(input,init)=>{

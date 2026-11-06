@@ -20,8 +20,8 @@ from .services import accessible_project, audit, require_approved_project
 
 
 def require_showcase_staff(user):
-    if not user.is_active or user.role not in {"ADMIN", "SECRETARIAT"}:
-        raise PermissionDenied("Ação disponível somente para secretaria ou administração.")
+    if not user.is_active or user.role != "ADMIN":
+        raise PermissionDenied("Ação disponível somente para o Administrador.")
     return user
 
 
@@ -49,7 +49,7 @@ def require_orientador(user, project):
 
 @transaction.atomic
 def create_showcase_entry(*, actor, group, date, location, notes=""):
-    """UC-018: Secretaria agenda a Mostra (PENDING -> SCHEDULED)."""
+    """UC-018: Administrador agenda a Mostra (PENDING -> SCHEDULED)."""
     require_showcase_staff(actor)
     locked_group = (
         ProjectGroup.objects.select_for_update().select_related("project").get(pk=group.pk)
@@ -172,7 +172,7 @@ def record_member_attendance(*, actor, entry, member_attendances):
 
 @transaction.atomic
 def cancel_showcase_entry(*, actor, entry, reason=""):
-    """Secretaria cancela a entrada na Mostra."""
+    """Administrador cancela a entrada na Mostra."""
     require_showcase_staff(actor)
     locked = ShowcaseEntry.objects.select_for_update().get(pk=entry.pk)
     if locked.status in {ShowcaseEntry.Status.PRESENTED, ShowcaseEntry.Status.ABSENT}:
@@ -292,7 +292,7 @@ def publish_project(*, actor, project, document):
 
 @transaction.atomic
 def withdraw_publication(*, actor, publication, reason=""):
-    """Secretaria retira a publicação (histórico preservado, sem republicação)."""
+    """Administrador retira a publicação (histórico preservado, sem republicação)."""
     require_showcase_staff(actor)
     locked = Publication.objects.select_for_update().get(pk=publication.pk)
     if locked.withdrawn_at:

@@ -46,7 +46,7 @@ class _RequireShowcaseStaff(IsAuthenticated):
         return super().has_permission(request, view) and bool(
             request.user
             and request.user.is_active
-            and request.user.role in {"ADMIN", "SECRETARIAT"}
+            and request.user.role == "ADMIN"
         )
 
 
@@ -61,7 +61,7 @@ class _RequireEvaluator(IsAuthenticated):
 
 
 class ShowcaseEntryListCreateView(generics.ListCreateAPIView):
-    """UC-018: Lista e agenda entradas na Mostra (secretaria/admin)."""
+    """UC-018: Lista e agenda entradas na Mostra (administrador)."""
 
     pagination_class = None
 
@@ -80,7 +80,7 @@ class ShowcaseEntryListCreateView(generics.ListCreateAPIView):
             .all()
         )
         user = self.request.user
-        if user.role in {"ADMIN", "SECRETARIAT"}:
+        if user.role == "ADMIN":
             return queryset
         return queryset.filter(group__evaluator__user=user)
 
@@ -118,7 +118,7 @@ class ShowcaseEntryDetailView(APIView):
             ShowcaseEntry.objects.select_related("group__project", "decided_by"),
             pk=entry_id,
         )
-        if request.user.role not in {"ADMIN", "SECRETARIAT"}:
+        if request.user.role != "ADMIN":
             from .showcase import require_evaluator
 
             require_evaluator(request.user, entry.group)
@@ -141,9 +141,9 @@ class ShowcaseEntryDetailView(APIView):
         return Response(ShowcaseEntrySerializer(entry, context={"request": request}).data)
 
     def delete(self, request, entry_id):
-        """Secretaria cancela a entrada na Mostra."""
-        if request.user.role not in {"ADMIN", "SECRETARIAT"} or not request.user.is_active:
-            raise PermissionDenied("Somente secretaria ou administração pode cancelar.")
+        """Administrador cancela a entrada na Mostra."""
+        if request.user.role != "ADMIN" or not request.user.is_active:
+            raise PermissionDenied("Somente o Administrador pode cancelar.")
         entry = get_object_or_404(ShowcaseEntry.objects.select_related("group"), pk=entry_id)
         reason = request.data.get("reason", "") if request.data else ""
         entry = cancel_showcase_entry(actor=request.user, entry=entry, reason=reason)
@@ -365,7 +365,7 @@ class PublicationListCreateView(generics.ListCreateAPIView):
 
 
 class PublicationWithdrawView(APIView):
-    """Secretaria retira a publicação do acervo."""
+    """Administrador retira a publicação do acervo."""
 
     permission_classes = [_RequireShowcaseStaff]
 

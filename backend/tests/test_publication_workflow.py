@@ -125,7 +125,7 @@ def test_full_flow_approval_without_edits(workflow):
     assert action(flow, "secretary", "publish", first).status_code == 400
     approved = action(flow, "advisor", "approve", first)
     assert approved.status_code == 200, approved.content
-    assert approved.json()["state"] == "SECRETARIAT"
+    assert approved.json()["state"] == "ADMIN"
     assert not Publication.objects.exists()
     published = action(flow, "secretary", "publish", first)
     assert published.status_code == 200, published.content
