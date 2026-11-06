@@ -1,5 +1,6 @@
 import{FormEvent,lazy,Suspense,useEffect,useRef,useState}from'react'
-import{applyToCollaboration,approveProject,attachmentUrl,closeRoom,createCollaborationOpportunity,createExpertise,createFollowUp,createRoom,createUser,decideCollaboration,decideInvitation,decideRoomTransfer,deleteExpertise,getProject,getSession,inviteStudent,listAcademicEligibleStudents,listCollaborationOpportunities,listCourses,listEligibleStudents,listMyExpertise,listMyInvitations,listProfessorProjects,listProjectInvitations,listProjects,listRooms,listRoomStudents,listRoomTransferRequests,listTimeline,listUsers,login,logout,pullStudent,requestProjectChanges,submitProjectForApproval,updateProject,updateExpertise,type AcademicRoom,type AcademicItem,type CollaborationOpportunity,type EligibleStudent,type Expertise,type Invitation,type NewUser,type Profile,type Project,type ProjectStatus,type Role,type RoomStudent,type RoomTransferRequest,type TimelineItem}from'./api'
+import{applyToCollaboration,approveProject,attachmentUrl,closeRoom,createCollaborationOpportunity,createExpertise,createFollowUp,createRoom,createUser,decideCollaboration,decideInvitation,decideRoomTransfer,deleteExpertise,getProject,getSession,inviteStudent,listAcademicEligibleStudents,listCollaborationOpportunities,listCourses,listEligibleStudents,listMyExpertise,listMyInvitations,listProfessorProjects,listProfessorProjectsPaginated,listProjectInvitations,listProjects,listProjectsPaginated,listRooms,listRoomStudents,listRoomTransferRequests,listTimeline,listUsers,login,logout,pullStudent,requestProjectChanges,submitProjectForApproval,updateProject,updateExpertise,type AcademicRoom,type AcademicItem,type CollaborationOpportunity,type EligibleStudent,type Expertise,type Invitation,type NewUser,type Profile,type Project,type ProjectStatus,type Role,type RoomStudent,type RoomTransferRequest,type TimelineItem}from'./api'
+import{ProjectListTable}from'./projectList'
 import{usePageMotion}from'./motion'
 import{ThemeProjectCreate,ThemeManagement,LifecyclePanel,ProfessorGroupAssignment,InstitutionalProjects}from'./projectLifecycle'
 import{DeliveriesPanel,ForwardedQueue}from'./deliveries'
@@ -163,33 +164,50 @@ function CandidateAction({opportunity,projects,onApply,onCancel}:{opportunity:Co
 function ProjectCreatePage({user}:{user:Profile}){return <ThemeProjectCreate user={user}/>}
 
 function ProjectsPanel({user}:{user:Profile}){
-  const[projects,setProjects]=useState<Project[]>([]),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null)
-  const[showAllActive,setShowAllActive]=useState(false),[showAllHistory,setShowAllHistory]=useState(false)
-  async function refresh(){setBusy(true);try{const[p,i]=await Promise.all([listProjects(),listMyInvitations()]);setProjects(p);setInvitations(i)}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}finally{setBusy(false)}}
-  useEffect(()=>{void refresh()},[])
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null)
+  const[query,setQuery]=useState('')
+  const handleProjectSort=(field:string,dir:'asc'|'desc')=>{
+    setSortField(field)
+    setSortDir(dir)
+    setPage(1)
+  }
+  const handlePageChange=(np:number)=>{
+    setPage(np)
+    setBusy(true)
+  }
+  async function refresh(){setBusy(true);try{const[data,i]=await Promise.all([listProjects(query),listMyInvitations()]);setProjects(data);setTotal(data.length);setInvitations(i)}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}finally{setBusy(false)}}
+  let ordering='-updated_at'
+  if(sortField){
+    ordering=(sortDir==='desc'?'-':'+')+sortField
+  }
+  const ordered=[...projects].sort((a,b)=>{
+    const aDate=new Date(a.updated_at).getTime()
+    const bDate=new Date(b.updated_at).getTime()
+    return sortDir==='desc'?bDate-aDate:aDate-bDate
+  })
+  const filtered=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
+  const start=(page-1)*pageSize
+  const pageItems=filtered.slice(start,start+pageSize)
+  const totalPages=Math.max(1,Math.ceil(filtered.length/pageSize))
+  const projectsContent = busy ? <p>Carregando projetos…</p> : <ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onSort={handleProjectSort} sortField={sortField} sortDir={sortDir}/>
+  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
   async function decide(id:string,decision:'accept'|'decline'|'cancel',replace=false){try{await decideInvitation(id,decision,replace);setSwitchInvite(null);setMessage(decision==='accept'?'Convite aceito.':decision==='decline'?'Convite recusado.':'Convite cancelado.');await refresh()}catch(reason){setSwitchInvite(null);setMessage(reason instanceof Error?reason.message:'Falha ao decidir convite')}}
   if(!user.profile?.active_room)return <section className="management"><div><h2>Meus projetos</h2><p className="empty-state">Você ainda não possui uma sala ativa. Um professor precisa incluí-lo em uma sala antes da criação de novos projetos.</p></div></section>
   const pending=invitations.filter(item=>item.status==='PENDING')
-  const active=projects.filter(project=>!['COMPLETED','ARCHIVED','CANCELLED'].includes(project.status)),history=projects.filter(project=>['COMPLETED','ARCHIVED','CANCELLED'].includes(project.status))
-  const activeShown=showAllActive?active:active.slice(-5),historyShown=showAllHistory?history:history.slice(-5)
   return <section className="projects-area" aria-labelledby="projects-title"><div className="projects-header"><div><span className="eyebrow">Controle acadêmico</span><h2 id="projects-title">Meus projetos</h2><p>Turma: {user.profile.class_offering_label}</p></div><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button></div>{message&&<p role="status" className="alert">{message}</p>}<div className="projects-blocos">
     <div className="projects-main">
-      <section className="bloco" aria-labelledby="active-title">
-        <header className="bloco-header"><div><h3 id="active-title">Projetos atuais</h3><p>Rascunhos, projetos em análise e projetos em andamento.</p></div>{active.length>5&&<button className="button secondary" aria-expanded={showAllActive} onClick={()=>setShowAllActive(value=>!value)}>{showAllActive?'Mostrar apenas os recentes':`Ver todos os projetos (${active.length})`}</button>}</header>
-        <div className="project-list" aria-live="polite">{busy?<p>Carregando projetos…</p>:activeShown.length===0?<p className="empty-state">Você ainda não possui projetos atuais.</p>:activeShown.map(project=><ProjectCard key={project.id} project={project}/>)}</div>
-      </section>
-      <section className="bloco" aria-labelledby="history-title">
-        <header className="bloco-header"><div><h3 id="history-title">Histórico</h3><p>Projetos concluídos ou arquivados.</p></div>{history.length>5&&<button className="button secondary" aria-expanded={showAllHistory} onClick={()=>setShowAllHistory(value=>!value)}>{showAllHistory?'Mostrar apenas os recentes':`Ver todos (${history.length})`}</button>}</header>
-        <div className="project-list">{historyShown.length===0?<p className="empty-state compact">Nenhum projeto no histórico.</p>:historyShown.map(project=><ProjectCard key={project.id} project={project}/>)}</div>
+      <section className="bloco" aria-labelledby="projects-table-title">
+        <header className="bloco-header"><div><h3 id="projects-table-title">Lista de projetos</h3><p>Ordenados pela última atualização. Clique em um projeto para abrir.</p></div></header>
+        <div className="project-table-wrap">{projectsContent}</div>
       </section>
     </div>
     <aside className="projects-convites">
       <section className="bloco" aria-labelledby="invites-title">
         <header className="bloco-header"><div><h3 id="invites-title">Meus convites</h3><p>Responda aos convites para integrar um grupo.</p></div>{pending.length>0&&<span className="badge">{pending.length} {pending.length===1?'novo':'novos'}</span>}</header>
-        <div className="invitation-list">{pending.length===0?<p className="empty-state compact">Nenhum convite pendente.</p>:pending.map(item=><article className="invitation-card" key={item.id}><div><strong>{item.project_name}</strong><p>Você foi convidado para integrar este grupo.</p></div><div className="action-row"><button className="button" onClick={()=>active.length?setSwitchInvite(item):void decide(item.id,'accept')}>Aceitar</button><button className="button secondary" onClick={()=>void decide(item.id,'decline')}>Recusar</button></div></article>)}</div>
+        <div className="invitation-list">{pending.length===0?<p className="empty-state compact">Nenhum convite pendente.</p>:pending.map(item=><article className="invitation-card" key={item.id}><div><strong>{item.project_name}</strong><p>Você foi convidado para integrar este grupo.</p></div><div className="action-row"><button className="button" onClick={()=>projects.length?setSwitchInvite(item):void decide(item.id,'accept')}>Aceitar</button><button className="button secondary" onClick={()=>void decide(item.id,'decline')}>Recusar</button></div></article>)}</div>
       </section>
     </aside>
-  </div>{switchInvite&&<div className="modal-backdrop"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="switch-title"><h2 id="switch-title">Você já possui um grupo vigente</h2><p>Você já participa de <strong>{active[0]?.name}</strong>. Solicite o cancelamento na página desse projeto e aguarde a decisão da Secretaria antes de aceitar outro grupo.</p><div className="action-row"><button className="button" onClick={()=>navigateTo(`#/projects/${active[0]?.id}`)}>Abrir projeto vigente</button><button className="button secondary" onClick={()=>setSwitchInvite(null)}>Cancelar</button></div></section></div>}</section>
+  </div>{switchInvite&&<div className="modal-backdrop"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="switch-title"><h2 id="switch-title">Você já possui um grupo vigente</h2><p>Você já participa de <strong>{projects[0]?.name}</strong>. Solicite o cancelamento na página desse projeto e aguarde a decisão da Secretaria antes de aceitar outro grupo.</p><div className="action-row"><button className="button" onClick={()=>navigateTo(`#/projects/${projects[0]?.id}`)}>Abrir projeto vigente</button><button className="button secondary" onClick={()=>setSwitchInvite(null)}>Cancelar</button></div></section></div>}</section>
 }
 
 function ProjectCard({project}:{project:Project}){
@@ -271,11 +289,28 @@ function ProfessorExpertise(){
 }
 
 function ProfessorProjectOverview(){
-  const[projects,setProjects]=useState<Project[]>([]),[loading,setLoading]=useState(true),[message,setMessage]=useState('')
-  useEffect(()=>{let active=true;listProfessorProjects().then(data=>{if(active)setProjects(data)}).catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[])
-  if(loading)return <p aria-live="polite">Carregando projetos…</p>
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[query,setQuery]=useState('')
+  const handleProfessorSort=(field:string,dir:'asc'|'desc')=>{
+    setSortField(field)
+    setSortDir(dir)
+    setPage(1)
+  }
+  const handleProfessorPageChange=(np:number)=>{
+    setPage(np)
+    setBusy(true)
+  }
+  async function refresh(){setBusy(true);try{const data=await listProfessorProjects();setProjects(data)}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}finally{setBusy(false)}}
+  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
+  const ordered=[...projects].sort((a,b)=>{
+    const aDate=new Date(a.updated_at).getTime()
+    const bDate=new Date(b.updated_at).getTime()
+    return sortDir==='desc'?bDate-aDate:aDate-bDate
+  })
+  const filtered=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
+  const start=(page-1)*pageSize
+  const pageItems=filtered.slice(start,start+pageSize)
   if(message)return <p role="alert" className="alert error">{message}</p>
-  return <section><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div>{projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<div className="module-grid">{projects.map(project=><button className="module-card" key={project.id} onClick={()=>{window.location.hash=`#/projects/${project.id}`}}><span>{project.name}</span><p>{project.about}</p><strong>{projectStatusLabels[project.status]} →</strong></button>)}</div>}</section>
+  return <section><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div>{projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
 }
 
 function UserManagement(){

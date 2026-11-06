@@ -2,7 +2,7 @@ from academic.models import AcademicRoom, RoomMembership, StudentProfile
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from rest_framework import serializers
+from rest_framework import filters, generics, serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -183,18 +183,25 @@ class ProjectAssignView(APIView):
         return Response(ProjectSerializer(project, context={"request": request}).data)
 
 
-class InstitutionalProjectsView(APIView):
+class InstitutionalProjectsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ["created_at", "updated_at", "status", "name"]
+    ordering = "-updated_at"
+    search_fields = ["name", "about"]
+    page_size = 100
 
-    def get(self, request):
-        if not is_admin(request.user):
+    def get_queryset(self):
+        if not is_admin(self.request.user):
             raise PermissionDenied("Área disponível ao Administrador.")
-        return Response(
-            ProjectSerializer(
-                Project.objects.filter(is_active=True)
-                .prefetch_related("groups__members__student__user")
-                .order_by("-created_at"),
-                many=True,
-                context={"request": request},
-            ).data
+        return (
+            Project.objects.filter(is_active=True)
+            .select_related("class_offering", "theme")
+            .prefetch_related(
+                "groups__members__student__user",
+                "groups__responsible_professor__user",
+                "groups__evaluator__user",
+            )
+            .distinct()
         )

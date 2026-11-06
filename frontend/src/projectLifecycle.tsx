@@ -1,5 +1,6 @@
-import {useEffect,useState,type FormEvent} from 'react'
-import {assignProjectStudent,createProject,listInstitutionalProjects,listRooms,listThemes,projectTransition,saveTheme,searchThemeStudents,updateTheme,type AcademicRoom,type EligibleStudent,type Profile,type Project,type ProjectTheme} from './api'
+import {useCallback,useEffect,useState,type FormEvent} from 'react'
+import {assignProjectStudent,createProject,listInstitutionalProjects,listInstitutionalProjectsPaginated,listRooms,listThemes,projectTransition,saveTheme,searchThemeStudents,updateTheme,type AcademicRoom,type EligibleStudent,type Profile,type Project,type ProjectTheme} from './api'
+import {ProjectListTable} from './projectList'
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const navigate=(hash:string)=>window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
@@ -46,7 +47,25 @@ export function ProfessorGroupAssignment({project,onChanged}:{project:Project;on
 }
 
 export function InstitutionalProjects(){
-  const[projects,setProjects]=useState<Project[]>([]),[error,setError]=useState('')
-  useEffect(()=>{listInstitutionalProjects().then(setProjects).catch(e=>setError(failure(e)))},[])
-  return <section><h2>Projetos institucionais</h2>{error&&<p role="alert" className="alert error">{error}</p>}{projects.length===0?<p>Nenhum projeto disponível.</p>:projects.map(project=><article className="project-card" key={project.id}><h3>{project.name}</h3><p>{statusLabels[project.status]}</p>{project.cancellation_requests?.some(r=>r.status==='PENDING')&&<strong>Cancelamento aguardando decisão</strong>}<button className="button" onClick={()=>navigate(`#/projects/${project.id}`)}>Abrir projeto</button></article>)}</section>
+  const[projects,setProjects]=useState<Project[]>([]),[filtered,setFiltered]=useState<Project[]>([]),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[query,setQuery]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(true)
+  const handleInstSort=(field:string,dir:'asc'|'desc')=>{
+    setSortField(field)
+    setSortDir(dir)
+    setPage(1)
+  }
+  const handleInstPageChange=(np:number)=>{
+    setPage(np)
+    setBusy(true)
+  }
+  async function refresh(){setBusy(true);try{const data=await listInstitutionalProjects();const ordered=[...data].sort((a,b)=>{
+    const aDate=new Date(a.updated_at).getTime()
+    const bDate=new Date(b.updated_at).getTime()
+    return sortDir==='desc'?bDate-aDate:aDate-bDate
+  })
+  const f=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
+  setProjects(f);setFiltered(f)}catch(e){setError(failure(e))}finally{setBusy(false)}}
+  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
+  const start=(page-1)*pageSize
+  const pageItems=filtered.slice(start,start+pageSize)
+  return <section><h2>Projetos institucionais</h2>{error&&<p role="alert" className="alert error">{error}</p>}{projects.length===0?<p>Nenhum projeto disponível.</p>:<div className="project-table-wrap"><ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handleInstPageChange} onSort={handleInstSort} sortField={sortField} sortDir={sortDir}/></div>}</section>
 }

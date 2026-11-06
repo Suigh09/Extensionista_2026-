@@ -1,10 +1,10 @@
-from accounts.models import AuditEvent
+from accounts.models import AuditEvent, User
 from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, status
+from rest_framework import filters, generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -53,19 +53,53 @@ from .uploads import validate_upload
 
 class ProjectListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ["created_at", "updated_at", "status", "name"]
+    ordering = "-updated_at"
+    search_fields = ["name", "about"]
+    page_size = 100
 
     def get_queryset(self):
-        student = require_student(self.request.user)
-        queryset = (
-            Project.objects.filter(
-                groups__members__student=student, groups__members__is_active=True
+        user = self.request.user
+        if user.role == User.Role.STUDENT:
+            student = require_student(user)
+            queryset = (
+                Project.objects.filter(
+                    groups__members__student=student, groups__members__is_active=True
+                )
+                .select_related("class_offering", "theme")
+                .prefetch_related(
+                    "groups__members__student__user",
+                    "groups__responsible_professor__user",
+                    "groups__evaluator__user",
+                )
+                .distinct()
             )
-            .select_related("class_offering")
-            .prefetch_related("groups__members__student__user")
-            .distinct()
-            .order_by("-created_at")
-        )
+        elif user.role == User.Role.PROFESSOR:
+            profile = getattr(user, "professor_profile", None)
+            queryset = (
+                Project.objects.filter(
+                    groups__responsible_professor=profile, groups__is_active=True
+                )
+                .select_related("class_offering", "theme")
+                .prefetch_related(
+                    "groups__members__student__user",
+                    "groups__responsible_professor__user",
+                    "groups__evaluator__user",
+                )
+                .distinct()
+            )
+        else:
+            queryset = (
+                Project.objects.filter(is_active=True)
+                .select_related("class_offering", "theme")
+                .prefetch_related(
+                    "groups__members__student__user",
+                    "groups__responsible_professor__user",
+                    "groups__evaluator__user",
+                )
+                .distinct()
+            )
         query = self.request.query_params.get("q", "").strip()[:100]
         for word in query.split():
             queryset = queryset.filter(Q(name__icontains=word) | Q(about__icontains=word))
@@ -433,7 +467,11 @@ class TimelineView(APIView):
 class ProfessorProjectListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsProfessor]
     serializer_class = ProjectSerializer
-    pagination_class = None
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ["created_at", "updated_at", "status", "name"]
+    ordering = "-updated_at"
+    search_fields = ["name", "about"]
+    page_size = 100
 
     def get_queryset(self):
         profile = self.request.user.professor_profile
@@ -444,9 +482,13 @@ class ProfessorProjectListView(generics.ListAPIView):
             ).filter(
                 Q(groups__responsible_professor=profile) | Q(groups__evaluator=profile)
             )
-            .prefetch_related("groups__members__student__user")
+            .select_related("class_offering", "theme")
+            .prefetch_related(
+                "groups__members__student__user",
+                "groups__responsible_professor__user",
+                "groups__evaluator__user",
+            )
             .distinct()
-            .order_by("name")
         )
 
 

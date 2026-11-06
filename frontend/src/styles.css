@@ -76,3 +76,16 @@ fieldset input{width:auto}
 .bloco .invitation-card{background:#f8faf9}
 @media(max-width:700px){.projects-header{align-items:stretch;flex-direction:column}.projects-header .button{width:100%}.create-project-card .action-row{align-items:stretch;flex-direction:column}}
 @media(max-width:900px){.projects-blocos{grid-template-columns:1fr}.projects-convites{position:static;order:-1}.bloco-header{flex-wrap:wrap}.bloco-header .button{width:100%}}
+
+/* Tabela de projetos */
+.project-list-table table{width:100%;border-collapse:collapse;margin-top:.5rem}
+.project-list-table th{background:#f5f7f6;text-align:left;font-weight:700;font-size:.85rem;color:#52606d;padding:.6rem .5rem;border-bottom:1px solid var(--line)}
+.project-list-table td{padding:.55rem .5rem;border-bottom:1px solid #eee;vertical-align:top;font-size:.88rem}
+.project-list-table tr:hover{background:#f9fbfa}
+.project-list-table time{color:#52606d;font-size:.82rem}
+.project-list-table .badge{font-size:.78rem;padding:.15rem .5rem;border-radius:.4rem}
+.project-table-wrap{overflow-x:auto}
+.project-list-table nav{margin-top:1rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+.project-list-table nav p{color:#52606d;font-size:.85rem;margin:0}
+.project-list-table nav .action-row{display:flex;gap:.3rem;align-items:center}
+.project-list-table nav .button{font-size:.82rem;padding:.35rem .7rem}
