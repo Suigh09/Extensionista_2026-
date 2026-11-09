@@ -2,6 +2,10 @@
 
 ## Concluídas
 
+- 06/11/2026: tela de projetos em lista com paginação (100 por página) implementada para aluno, professor e Secretaria/Admin. Ordenação por última atualização. Frontend: novo componente ProjectListTable. Backend: paginação e ordenação em ProjectListCreateView, ProfessorProjectListView e InstitutionalProjectsView. 86 testes frontend aprovados, build OK.
+- 06/11/2026: perfis Secretaria e Admin unificados em Administrador (ADMIN). Migração 0008_convert_secretariat_to_admin aplicada. Todas as verificações de permissão usam role == "ADMIN".
+- 06/11/2026: commit 33b05d0 enviado ao GitHub origin/main com todas as alterações de implementação.
+
 - 05/11/2026: commit de implementação 0a6733b enviado ao GitHub origin/main após
   autorização do usuário para scope workflow. Push normal confirmado, sem force,
   sem bancos/credenciais/script local inseguro. CI remoto não declarado aprovado.

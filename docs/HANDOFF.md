@@ -1,8 +1,32 @@
 # Handoff — Plataforma Extensionista
 
-## Implementação atual — acervo completo, 05/11/2026
+## Implementação atual — acervo completo, 06/11/2026
 
-Esta seção substitui o diagnóstico pré-implementação abaixo. A partir desta data, os perfis Secretaria e Admin foram unificados no perfil **Administrador** (`ADMIN`).
+Esta seção substitui o diagnóstico pré-implementação abaixo.
+
+### Tela de acervo em lista com paginação — 06/11/2026
+
+- Substituída a visualização por cards da tela de projetos por uma tabela listagem com paginação.
+- A lista mostra: número, título, tema, status, data de abertura, última atualização, líder, orientador e avaliador.
+- Ordenação por última atualização (mais recente no topo) e paginação de 100 itens por página.
+- Aplica-se à tela de projetos do aluno, ao painel "Projetos sob minha responsabilidade" do professor e ao acervo institucional do Admin.
+- Backend: `ProjectListCreateView`, `ProfessorProjectListView` e `InstitutionalProjectsView` passaram a usar paginação (`page_size=100`) e ordenação por `-updated_at`.
+- Frontend: novo componente `ProjectListTable` em `frontend/src/projectList.tsx`, com ordenação clicável e paginação.
+- 86 testes frontend aprovados, build aprovado.
+- Backend: `manage.py check` aprovado, migrações sem pendências.
+
+### Unificação de perfis Secretaria e Admin — 06/11/2026
+
+- Os perfis `SECRETARIAT` e `ADMIN` foram unificados no perfil **Administrador** (`ADMIN`).
+- Migração `backend/accounts/migrations/0008_convert_secretariat_to_admin.py` converte usuários existentes de `SECRETARIAT` para `ADMIN`.
+- Todas as verificações de permissão no backend e frontend agora usam `role == "ADMIN"`.
+- Documentação atualizada (HANDOFF, TASKS, DESAFIOS, ACERVO_WORKFLOW_GUIDE, ARCHITECTURE, DECISIONS, README, AI_CONTEXT).
+
+### Entrega ao GitHub — 06/11/2026
+
+- Commit **33b05d0** enviado ao `origin/main` com todas as alterações de implementação.
+- Commit `b9789ec` (documentação de envio anterior) já estava no repositório remoto.
+- Credenciais, bancos e backups permanecem fora do repositório (`.gitignore`).
 
 ### Entrega ao GitHub autorizada — 05/11/2026
 
