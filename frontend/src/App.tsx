@@ -178,7 +178,7 @@ function ProjectsPanel({user}:{user:Profile}){
   useEffect(()=>{
     let active=true
     setBusy(true);setMessage('')
-    void listProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
+    void listProjectsPaginated('',`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
       .finally(()=>{if(active)setBusy(false)})
@@ -292,14 +292,14 @@ function ProfessorProjectOverview(){
   useEffect(()=>{
     let active=true
     setBusy(true);setMessage('')
-    void listProfessorProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
+    void listProfessorProjectsPaginated('',`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
   },[filters,page,sortField,sortDir])
   if(message)return <p role="alert" className="alert error">{message}</p>
-  return <section aria-busy={busy}><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div><ProjectFilterBar filters={filters} onChange={f=>{setFilters(f);setPage(1)}} isAdmin={false}/><label>Pesquisar projetos<input type="search" value={filters.q} onChange={e=>setFilters({...filters,q:e.target.value})}/></label>{busy?<p role="status">Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
+  return <section aria-busy={busy}><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div><ProjectFilterBar filters={filters} onChange={f=>{setFilters(f);setPage(1)}} isAdmin={false}/>{busy?<p role="status">Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
 }
 function UserManagement(){
   const[users,setUsers]=useState<Profile[]>([]),[role,setRole]=useState<Role>('STUDENT'),[courses,setCourses]=useState<AcademicItem[]>([]),[message,setMessage]=useState('')

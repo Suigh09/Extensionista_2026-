@@ -156,36 +156,32 @@ export function ProjectListTable({projects,total,page,pageSize,onPageChange,onSo
 }
 
 
+export type FilterOp='exact'|'not_exact'|'contains'|'not_contains'
+export type FilterRow={field:string;op:FilterOp;value:string}
 export type ProjectFilters={
-  q:string
-  status:string[]
-  advisor:string
-  evaluator:string
-  student:string
-  leader:string
-  room:string
-  theme:string
-  is_active:''|'true'|'false'
-  showcase_status:string[]
-  combine:'and'|'or'
+  rows:FilterRow[]
+  combiners:('and'|'or')[]
 }
 
 export function emptyProjectFilters():ProjectFilters{
-  return {q:'',status:[],advisor:'',evaluator:'',student:'',leader:'',room:'',theme:'',is_active:'',showcase_status:[],combine:'and'}
+  return {rows:[],combiners:[]}
 }
 
-export function filtersToExtra(filters:ProjectFilters):Record<string,string|string[]>{
+export function filtersToExtra(filters:ProjectFilters,query=''):Record<string,string|string[]>{
   const extra:Record<string,string|string[]>={}
-  if(filters.status.length) extra.status=filters.status
-  if(filters.advisor) extra.advisor=filters.advisor
-  if(filters.evaluator) extra.evaluator=filters.evaluator
-  if(filters.student) extra.student=filters.student
-  if(filters.leader) extra.leader=filters.leader
-  if(filters.room) extra.room=filters.room
-  if(filters.theme) extra.theme=filters.theme
-  if(filters.is_active) extra.is_active=filters.is_active
-  if(filters.showcase_status.length) extra.showcase_status=filters.showcase_status
-  extra.combine=filters.combine
+  const rows=query?[{field:'q',op:'contains',value:query},...filters.rows]:filters.rows
+  extra.row_count=String(rows.length)
+  rows.forEach((row,i)=>{
+    extra[`field_${i}`]=row.field
+    extra[`op_${i}`]=row.op
+    extra[`value_${i}`]=row.value
+  })
+  // combiner_i existe apenas entre a linha i e a i+1
+  filters.combiners.forEach((c,i)=>{
+    if(i<rows.length-1){
+      extra[`combiner_${i}`]=c
+    }
+  })
   return extra
 }
 
@@ -196,100 +192,184 @@ const SHOWCASE_LABELS:Record<string,string>={'PENDING':'Pendente','SCHEDULED':'A
 
 export function ProjectFilterBar({filters,onChange,isAdmin}:{filters:ProjectFilters;onChange:(f:ProjectFilters)=>void;isAdmin:boolean}){
   const [adding,setAdding]=useState(false)
-  const [field,setField]=useState('q')
-  const [value,setValue]=useState('')
-  const update=(patch:Partial<ProjectFilters>)=>onChange({...filters,...patch})
-  const fields=[
-    {key:'q',label:'Texto',type:'text'},
-    {key:'status',label:'Status do projeto',type:'status'},
-    {key:'advisor',label:'Orientador',type:'text'},
-    {key:'evaluator',label:'Avaliador',type:'text'},
-    {key:'student',label:'Integrante',type:'text'},
-    {key:'leader',label:'Líder',type:'text'},
-    {key:'room',label:'Turma',type:'text'},
-    {key:'theme',label:'Tema',type:'text'},
-    {key:'showcase_status',label:'Agenda da Mostra',type:'showcase'},
-  ]
-  if(isAdmin) fields.push({key:'is_active',label:'Ativo',type:'active'})
+  const [editing,setEditing]=useState<number|null>(null)
+  const [newField,setNewField]=useState('')
+  const [newOp,setNewOp]=useState<FilterOp>('contains')
+  const [newValue,setNewValue]=useState('')
 
-  function addFilter(){
-    if(!value.trim() && field!=='is_active') return
-    if(field==='status' || field==='showcase_status'){
-      const arr=field==='status'?filters.status:filters.showcase_status
-      if(!arr.includes(value)) {
-        const next=[...arr,value]
-        update(field==='status'?{status:next}:{showcase_status:next})
-      }
-    } else if(field==='is_active'){
-      update({is_active:value as ''|'true'|'false'})
-    } else {
-      update({[field]:value.trim()} as Partial<ProjectFilters>)
-    }
-    setValue('')
-    setAdding(false)
+  const fieldOptions=[
+    {key:'q',label:'Texto (título/sobre/tema)'},
+    {key:'status',label:'Status do projeto'},
+    {key:'advisor',label:'Orientador'},
+    {key:'evaluator',label:'Avaliador'},
+    {key:'student',label:'Integrante'},
+    {key:'leader',label:'Líder'},
+    {key:'room',label:'Turma'},
+    {key:'theme',label:'Tema'},
+  ]
+  if(isAdmin) fieldOptions.push({key:'is_active',label:'Ativo'})
+  fieldOptions.push({key:'showcase_status',label:'Agenda da Mostra'})
+
+  const opOptions=[
+    {key:'contains',label:'Contém'},
+    {key:'not_contains',label:'Não contém'},
+    {key:'exact',label:'É'},
+    {key:'not_exact',label:'Não é'},
+  ]
+
+  const statusOptions=PROJECT_STATUSES.map(s=>({key:s,label:STATUS_LABELS[s]??s}))
+  const showcaseOptions=SHOWCASE_STATUSES.map(s=>({key:s,label:SHOWCASE_LABELS[s]??s}))
+
+  // Condições É/NÃO É usam combo; CONTÉM/NÃO CONTÉM usam texto
+  const isComboOp=(op:string)=>op==='exact'||op==='not_exact'
+  // Campos com lista de opções fechada para uso em combo
+  const comboOptionsForField=(field:string)=>{
+    if(field==='status') return statusOptions
+    if(field==='showcase_status') return showcaseOptions
+    if(field==='is_active') return [
+      {key:'true',label:'Ativo'},
+      {key:'false',label:'Inativo'},
+    ]
+    return []
+  }
+
+  const addRow=()=>{
+    if(!newField) return
+    const row:FilterRow={field:newField,op:newOp,value:newValue.trim()}
+    const nextRows=[...filters.rows,row]
+    const nextCombiners:('and'|'or')[]=[...filters.combiners,'and']
+    onChange({rows:nextRows,combiners:nextCombiners})
+    setAdding(false);setNewField('');setNewOp('contains');setNewValue('')
+  }
+
+  const updateRow=(index:number,patch:Partial<FilterRow>)=>{
+    const next=[...filters.rows]
+    next[index]={...next[index],...patch}
+    onChange({rows:next,combiners:[...filters.combiners]})
+  }
+
+  const setCombiner=(index:number,value:'and'|'or')=>{
+    const next:('and'|'or')[]=[...filters.combiners]
+    next[index]=value
+    onChange({rows:[...filters.rows],combiners:next})
+  }
+
+  const removeRow=(index:number)=>{
+    const nextRows=filters.rows.filter((_,i)=>i!==index)
+    const nextCombiners=filters.combiners.filter((_,i)=>i!==index)
+    onChange({rows:nextRows,combiners:nextCombiners})
   }
 
   const chips:string[]=[]
-  if(filters.q) chips.push(`Texto: ${filters.q}`)
-  filters.status.forEach(s=>chips.push(`Status: ${STATUS_LABELS?.[s]??s}`))
-  if(filters.advisor) chips.push(`Orientador: ${filters.advisor}`)
-  if(filters.evaluator) chips.push(`Avaliador: ${filters.evaluator}`)
-  if(filters.student) chips.push(`Integrante: ${filters.student}`)
-  if(filters.leader) chips.push(`Líder: ${filters.leader}`)
-  if(filters.room) chips.push(`Turma: ${filters.room}`)
-  if(filters.theme) chips.push(`Tema: ${filters.theme}`)
-  if(filters.is_active) chips.push(`Ativo: ${filters.is_active==='true'?'Sim':'Não'}`)
-  filters.showcase_status.forEach(s=>chips.push(`Agenda: ${SHOWCASE_LABELS?.[s]??s}`))
+  filters.rows.forEach(row=>{
+    const label=fieldOptions.find(f=>f.key===row.field)?.label??row.field
+    const opLabel=opOptions.find(o=>o.key===row.op)?.label??row.op
+    chips.push(`${label} ${opLabel} ${row.value||'(vazio)'}`)
+  })
 
-  const selectedField=fields.find(f=>f.key===field)
+  const valueInput=(
+    field:string,
+    op:string,
+    value:string,
+    onChangeValue:(v:string)=>void,
+    disabled=false
+  )=>{
+    if(isComboOp(op)){
+      const options=comboOptionsForField(field)
+      if(options.length===0){
+        // Sem lista fechada: mostra texto mesmo em modo exato
+        return (
+          <input
+            type="search"
+            value={value}
+            onChange={e=>onChangeValue(e.target.value)}
+            placeholder="Valor…"
+            disabled={disabled}
+          />
+        )
+      }
+      return (
+        <select value={value} onChange={e=>onChangeValue(e.target.value)} disabled={disabled}>
+          <option value="">Selecione…</option>
+          {options.map(o=><option key={o.key} value={o.key}>{o.label}</option>)}
+        </select>
+      )
+    }
+    return (
+      <input
+        type="search"
+        value={value}
+        onChange={e=>onChangeValue(e.target.value)}
+        placeholder="Valor…"
+        disabled={disabled}
+      />
+    )
+  }
 
   return (
     <section className="project-filter-bar compact" aria-label="Filtros de projetos">
       <div className="filter-toolbar">
         <button className="button secondary" type="button" onClick={()=>setAdding(v=>!v)}>+ Adicionar filtro</button>
-        <label className="filter-combine">Combinar
-          <select value={filters.combine} onChange={e=>update({combine:e.target.value as 'and'|'or'})}>
-            <option value="and">E (todos)</option>
-            <option value="or">OU (qualquer)</option>
+        <label className="filter-combine">Combinar linhas
+          <select value={filters.combiners.length?filters.combiners[0]:'and'} onChange={e=>{const v=e.target.value as 'and'|'or';const next=filters.combiners.map(()=>v);onChange({rows:[...filters.rows],combiners:next})}}>
+            <option value="and">E (todas as linhas)</option>
+            <option value="or">OU (qualquer linha)</option>
           </select>
         </label>
-        {chips.length>0&&<button className="button secondary" type="button" onClick={()=>onChange(emptyProjectFilters())}>Limpar filtros</button>}
-        <span className="filter-count">{chips.length} filtro(s) ativo(s)</span>
+        {filters.rows.length>0&&<button className="button secondary" type="button" onClick={()=>onChange(emptyProjectFilters())}>Limpar filtros</button>}
+        <span className="filter-count">{filters.rows.length} linha(s) de filtro</span>
       </div>
       {adding&&(
         <div className="filter-add-row">
-          <select value={field} onChange={e=>{setField(e.target.value);setValue('')}}>
-            {fields.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+          <select value={newField} onChange={e=>{setNewField(e.target.value);setNewOp('contains');setNewValue('')}}>
+            <option value="">Escolha o campo…</option>
+            {fieldOptions.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
           </select>
-          {selectedField?.type==='status'&&(
-            <select value={value} onChange={e=>setValue(e.target.value)}>
-              <option value="">Selecione…</option>
-              {PROJECT_STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]??s}</option>)}
-            </select>
-          )}
-          {selectedField?.type==='showcase'&&(
-            <select value={value} onChange={e=>setValue(e.target.value)}>
-              <option value="">Selecione…</option>
-              {SHOWCASE_STATUSES.map(s=><option key={s} value={s}>{SHOWCASE_LABELS[s]??s}</option>)}
-            </select>
-          )}
-          {selectedField?.type==='active'&&(
-            <select value={value} onChange={e=>setValue(e.target.value)}>
-              <option value="true">Ativos</option>
-              <option value="false">Inativos</option>
-            </select>
-          )}
-          {selectedField?.type==='text'&&(
-            <input type="search" value={value} onChange={e=>setValue(e.target.value)} placeholder="Valor…" autoFocus onKeyDown={e=>{if(e.key==='Enter')addFilter()}}/>
-          )}
-          <button className="button" type="button" onClick={addFilter} disabled={!value.trim() && field!=='is_active'}>Adicionar</button>
-          <button className="button secondary" type="button" onClick={()=>{setAdding(false);setValue('')}}>Cancelar</button>
+          <select value={newOp} onChange={e=>setNewOp(e.target.value as FilterOp)}>
+            {opOptions.map(o=><option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+          {valueInput(newField,newOp,newValue,v=>setNewValue(v))}
+          <button className="button" type="button" onClick={addRow} disabled={!newField||!newValue.trim()}>Adicionar linha</button>
+          <button className="button secondary" type="button" onClick={()=>{setAdding(false);setNewValue('')}}>Cancelar</button>
         </div>
       )}
-      {chips.length>0&&(
-        <div className="active-filters" aria-label="Filtros ativos">
-          {chips.map((chip,i)=><span key={i} className="filter-chip">{chip}</span>)}
+      {filters.rows.length>0&&(
+        <div className="filter-rows" aria-label="Linhas de filtro">
+          {filters.rows.map((row,i)=>{
+            const editingRow=editing===i
+            return (
+              <div key={i} className="filter-row">
+                <select value={row.field} onChange={e=>updateRow(i,{field:e.target.value,op:'contains',value:''})}>
+                  {fieldOptions.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+                </select>
+                <select value={row.op} onChange={e=>updateRow(i,{op:e.target.value as FilterOp})}>
+                  {opOptions.map(o=><option key={o.key} value={o.key}>{o.label}</option>)}
+                </select>
+                {editingRow&&(
+                  <>
+                  {valueInput(row.field,row.op,row.value,v=>updateRow(i,{value:v}))}
+                  <button className="button secondary" type="button" onClick={()=>{setEditing(null);updateRow(i,{value:row.value})}}>OK</button>
+                  <button className="button secondary" type="button" onClick={()=>setEditing(null)}>Cancelar</button>
+                  </>
+                )}
+                {!editingRow&&(
+                  <span className="filter-row-value">{row.value||'(vazio)'}</span>
+                )}
+                {i<filters.rows.length-1&&(
+                  <select value={filters.combiners[i]??'and'} onChange={e=>setCombiner(i,e.target.value as 'and'|'or')}>
+                    <option value="and">E</option>
+                    <option value="or">OU</option>
+                  </select>
+                )}
+                <button className="button secondary" type="button" onClick={()=>removeRow(i)} title="Remover linha">×</button>
+                {!editingRow&&<button className="button secondary" type="button" onClick={()=>setEditing(i)}>Editar</button>}
+              </div>
+            )
+          })}
         </div>
+      )}
+      {filters.rows.length>0&&(
+        <div className="active-filters" aria-label="Filtros ativos">{chips.map((chip,i)=><span key={i} className="filter-chip">{chip}</span>)}</div>
       )}
     </section>
   )

@@ -61,7 +61,7 @@ export function InstitutionalProjects(){
   useEffect(()=>{
     let active=true
     setBusy(true);setError('')
-    void listInstitutionalProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField}`,page,pageSize,filtersToExtra(filters))
+    void listInstitutionalProjectsPaginated('',`${sortDir==='desc'?'-':''}${sortField}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(e=>{if(active)setError(failure(e))})
       .finally(()=>{if(active)setBusy(false)})

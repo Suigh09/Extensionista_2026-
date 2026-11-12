@@ -1,161 +1,140 @@
-"""Filtros GLPI-like para listagens de projetos."""
+"""Filtros GLPI-like para listagens de projetos.
+
+Cada linha de filtro é enviada como:
+    field_i, op_i, value_i   (condição da linha i)
+    combiner_i               (E/OU entre a linha i e a i+1)
+
+Condições suportadas:
+    exact        -> campo igual ao valor (iexact / booleano)
+    not_exact    -> campo diferente do valor
+    contains     -> campo contém o texto (icontains)
+    not_contains -> campo não contém o texto
+"""
 
 from django.db.models import Q
 
 
-def _values(request, *names):
-    result = []
-    for name in names:
-        for value in request.query_params.getlist(name):
-            for part in str(value).split(","):
-                part = part.strip()
-                if part:
-                    result.append(part)
-    # preserve order, drop duplicates
-    seen = set()
-    unique = []
-    for item in result:
-        if item not in seen:
-            seen.add(item)
-            unique.append(item)
-    return unique
+def _values(request, name):
+    """Valores repetidos de um mesmo parâmetro (ex.: ?status=1&status=2)."""
+    raw = request.query_params.getlist(name)
+    out = []
+    for value in raw:
+        for part in str(value).split(","):
+            part = part.strip()
+            if part:
+                out.append(part)
+    return out
 
 
-def _bool(value):
-    if value is None:
+def _row_filters(request, index):
+    """Constrói o Q de uma linha de filtro pelo índice."""
+    field = request.query_params.get(f"field_{index}")
+    op = request.query_params.get(f"op_{index}", "contains")
+    value = request.query_params.get(f"value_{index}")
+    if field is None or value in (None, ""):
         return None
-    lowered = str(value).strip().lower()
-    if lowered in {"true", "1", "yes", "sim"}:
-        return True
-    if lowered in {"false", "0", "no", "nao", "não"}:
-        return False
-    return None
+
+    q = _field_q(field, op, value, request)
+    return q
+
+
+def _field_q(field, op, value, request):
+    negate = op in ("not_exact", "not_contains")
+    exact = op in ("exact", "not_exact")
+
+    if field == "q":
+        # Texto livre: busca em nome, sobre e tema.
+        base = Q()
+        for word in str(value).split()[:20]:
+            base |= (
+                Q(name__icontains=word)
+                | Q(about__icontains=word)
+                | Q(theme_snapshot__title__icontains=word)
+            )
+        return ~base if negate else base
+
+    if field == "status":
+        base = Q(status__iexact=value)
+    elif field == "showcase_status":
+        base = Q(groups__showcase_entry__status__iexact=value)
+    elif field == "is_active":
+        base = Q(is_active=(value.lower() in ("true", "1", "sim", "yes")))
+    elif field in ("advisor", "orientador"):
+        base = _person_q("groups__responsible_professor__user", value, exact)
+    elif field in ("evaluator", "avaliador"):
+        base = _person_q("groups__evaluator__user", value, exact)
+    elif field in ("student", "integrante", "aluno"):
+        base = _person_q("groups__members__student__user", value, exact)
+    elif field in ("leader", "lider"):
+        base = _person_q("groups__leader__user", value, exact)
+    elif field in ("room", "turma", "class_offering"):
+        base = Q(class_offering__code__icontains=value) | Q(
+            class_offering__subject__code__icontains=value
+        )
+        try:
+            base |= Q(class_offering__pk=int(value))
+        except (ValueError, TypeError):
+            pass
+    elif field in ("theme", "tema"):
+        base = Q(theme_snapshot__title__icontains=value)
+        try:
+            base |= Q(theme__pk=int(value))
+        except (ValueError, TypeError):
+            pass
+    else:
+        return Q()  # campo desconhecido: sem filtro
+
+    return ~base if negate else base
+
+
+def _person_q(user_path, value, exact):
+    """Busca pessoa por nome/username/RA, ou por pk quando numérico."""
+    parts = str(value).split()
+    q = Q()
+    if exact and len(parts) == 1:
+        token = parts[0]
+        if token.isdigit():
+            q = Q(**{f"{user_path}__pk": int(token)})
+        else:
+            q = Q(**{f"{user_path}__username__iexact": token})
+    else:
+        for word in parts:
+            q &= (
+                Q(**{f"{user_path}__first_name__icontains": word})
+                | Q(**{f"{user_path}__last_name__icontains": word})
+                | Q(**{f"{user_path}__username__icontains": word})
+            )
+    if "student" in user_path:
+        # integrante também pode ser buscado por RA
+        q |= Q(**{f"{user_path.replace('__user','')}__ra__icontains": value})
+    return q
 
 
 def apply_project_filters(queryset, request):
-    combine = (request.query_params.get("combine") or "and").strip().lower()
-    use_or = combine == "or"
+    """Aplica linhas de filtro GLPI-like sobre o queryset de projetos."""
+    try:
+        row_count = int(request.query_params.get("row_count", "0"))
+    except (ValueError, TypeError):
+        row_count = 0
 
-    criteria = []
-
-    # Texto livre (nome, sobre, grupo, integrantes, orientador, avaliador, tema)
-    words = []
-    for raw in _values(request, "q", "search"):
-        words.extend(raw.split())
-    if words:
-        text_q = Q()
-        for word in words[:20]:
-            text_q |= (
-                Q(name__icontains=word)
-                | Q(about__icontains=word)
-                | Q(groups__name__icontains=word)
-                | Q(groups__members__student__user__first_name__icontains=word)
-                | Q(groups__members__student__user__last_name__icontains=word)
-                | Q(groups__members__student__ra__icontains=word)
-                | Q(groups__responsible_professor__user__first_name__icontains=word)
-                | Q(groups__responsible_professor__user__last_name__icontains=word)
-                | Q(groups__evaluator__user__first_name__icontains=word)
-                | Q(groups__evaluator__user__last_name__icontains=word)
-                | Q(theme_snapshot__title__icontains=word)
+    clauses = []
+    combiners = []
+    for i in range(row_count):
+        q = _row_filters(request, i)
+        if q is None:
+            continue
+        clauses.append(q)
+        if i < row_count - 1:
+            combiners.append(
+                request.query_params.get(f"combiner_{i}", "and").strip().lower()
             )
-        criteria.append(text_q)
 
-    # Status
-    statuses = _values(request, "status")
-    if statuses:
-        criteria.append(Q(status__in=statuses))
-
-    # Orientador (id ou fragmento de nome)
-    advisors = _values(request, "advisor", "orientador")
-    if advisors:
-        adv_q = Q()
-        for value in advisors:
-            if value.isdigit():
-                adv_q |= Q(groups__responsible_professor__pk=int(value))
-            adv_q |= Q(groups__responsible_professor__user__first_name__icontains=value)
-            adv_q |= Q(groups__responsible_professor__user__last_name__icontains=value)
-            adv_q |= Q(groups__responsible_professor__user__username__icontains=value)
-        criteria.append(adv_q)
-
-    # Avaliador
-    evaluators = _values(request, "evaluator", "avaliador")
-    if evaluators:
-        ev_q = Q()
-        for value in evaluators:
-            if value.isdigit():
-                ev_q |= Q(groups__evaluator__pk=int(value))
-            ev_q |= Q(groups__evaluator__user__first_name__icontains=value)
-            ev_q |= Q(groups__evaluator__user__last_name__icontains=value)
-            ev_q |= Q(groups__evaluator__user__username__icontains=value)
-        criteria.append(ev_q)
-
-    # Integrante (aluno)
-    students = _values(request, "student", "integrante", "aluno")
-    if students:
-        st_q = Q()
-        for value in students:
-            if value.isdigit():
-                st_q |= Q(groups__members__student__pk=int(value))
-            st_q |= Q(groups__members__student__user__first_name__icontains=value)
-            st_q |= Q(groups__members__student__user__last_name__icontains=value)
-            st_q |= Q(groups__members__student__ra__icontains=value)
-            st_q |= Q(groups__members__student__user__username__icontains=value)
-        criteria.append(st_q)
-
-    # Líder
-    leaders = _values(request, "leader", "lider")
-    if leaders:
-        ld_q = Q()
-        for value in leaders:
-            if value.isdigit():
-                ld_q |= Q(groups__leader__pk=int(value))
-            ld_q |= Q(groups__leader__user__first_name__icontains=value)
-            ld_q |= Q(groups__leader__user__last_name__icontains=value)
-            ld_q |= Q(groups__leader__ra__icontains=value)
-            ld_q |= Q(groups__leader__user__username__icontains=value)
-        criteria.append(ld_q)
-
-    # Turma / sala acadêmica
-    rooms = _values(request, "room", "turma", "class_offering")
-    if rooms:
-        rm_q = Q()
-        for value in rooms:
-            rm_q |= Q(class_offering__code__icontains=value)
-            rm_q |= Q(class_offering__subject__code__icontains=value)
-            try:
-                rm_q |= Q(class_offering__pk=int(value))
-            except (ValueError, TypeError):
-                pass
-        criteria.append(rm_q)
-
-    # Tema
-    themes = _values(request, "theme", "tema")
-    if themes:
-        th_q = Q()
-        for value in themes:
-            th_q |= Q(theme_snapshot__title__icontains=value)
-            try:
-                th_q |= Q(theme__pk=value)
-            except (ValueError, TypeError):
-                pass
-        criteria.append(th_q)
-
-    # Ativo/inativo
-    active = _bool(request.query_params.get("is_active"))
-    if active is not None:
-        criteria.append(Q(is_active=active))
-
-    # Status da agenda da Mostra
-    showcase_statuses = _values(request, "showcase_status", "agenda_status")
-    if showcase_statuses:
-        criteria.append(Q(groups__showcase_entry__status__in=showcase_statuses))
-
-    if not criteria:
+    if not clauses:
         return queryset
 
-    combined = criteria[0]
-    for q in criteria[1:]:
-        if use_or:
+    combined = clauses[0]
+    for i, q in enumerate(clauses[1:]):
+        if combiners[i] == "or":
             combined = combined | q
         else:
             combined = combined & q
