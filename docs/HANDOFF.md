@@ -1,4 +1,10 @@
 # Handoff — Plataforma Extensionista
+## Retomada — 12/11/2026 (filtro compacto)
+
+- Barra de filtros redesenhada: agora compacta — botão "+ Adicionar filtro" abre seletor de campo/operador/valor, filtros ativos viram chips removíveis, toggle E/OU e "Limpar filtros". Sem grade fixa de inputs ocupando espaço.
+- Validação real: adicionar filtro de orientador retornou 2 projetos; chips e persistência OK. Captura `.runtime/project-filters-compact.png`.
+- Commit 332dbf4 enviado (push OK).
+
 ## Retomada — 12/11/2026 (filtros GLPI-like na tabela de Projetos)
 
 - Backend: novo módulo `projects/filters.py` com `apply_project_filters` aplicado nos três endpoints (lista do aluno, professor e institucional). Filtros: texto (q/search), status (múltiplo), orientador, avaliador, integrante, líder, turma, tema, ativo, status da agenda da Mostra. Combinação global E/OU via `combine=and|or`. Permissões preservadas: admin vê todos; professor vê os que orienta/avalia; aluno vê os que participa.
