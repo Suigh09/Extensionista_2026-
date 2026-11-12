@@ -195,41 +195,102 @@ const STATUS_LABELS:Record<string,string>={'DRAFT':'Rascunho','PENDING_APPROVAL'
 const SHOWCASE_LABELS:Record<string,string>={'PENDING':'Pendente','SCHEDULED':'Agendado','PRESENTED':'Apresentado','ABSENT':'Ausente','CANCELLED':'Cancelado'}
 
 export function ProjectFilterBar({filters,onChange,isAdmin}:{filters:ProjectFilters;onChange:(f:ProjectFilters)=>void;isAdmin:boolean}){
+  const [adding,setAdding]=useState(false)
+  const [field,setField]=useState('q')
+  const [value,setValue]=useState('')
   const update=(patch:Partial<ProjectFilters>)=>onChange({...filters,...patch})
-  const toggleStatus=(value:string)=>{const next=filters.status.includes(value)?filters.status.filter(v=>v!==value):[...filters.status,value];update({status:next})}
-  const toggleShowcase=(value:string)=>{const next=filters.showcase_status.includes(value)?filters.showcase_status.filter(v=>v!==value):[...filters.showcase_status,value];update({showcase_status:next})}
-  const activeChips:string[]=[]
-  if(filters.q) activeChips.push(`Texto: ${filters.q}`)
-  filters.status.forEach(s=>activeChips.push(`Status: ${STATUS_LABELS[s]??s}`))
-  if(filters.advisor) activeChips.push(`Orientador: ${filters.advisor}`)
-  if(filters.evaluator) activeChips.push(`Avaliador: ${filters.evaluator}`)
-  if(filters.student) activeChips.push(`Integrante: ${filters.student}`)
-  if(filters.leader) activeChips.push(`Líder: ${filters.leader}`)
-  if(filters.room) activeChips.push(`Turma: ${filters.room}`)
-  if(filters.theme) activeChips.push(`Tema: ${filters.theme}`)
-  if(filters.is_active) activeChips.push(`Ativo: ${filters.is_active==='true'?'Sim':'Não'}`)
-  filters.showcase_status.forEach(s=>activeChips.push(`Agenda: ${SHOWCASE_LABELS[s]??s}`))
+  const fields=[
+    {key:'q',label:'Texto',type:'text'},
+    {key:'status',label:'Status do projeto',type:'status'},
+    {key:'advisor',label:'Orientador',type:'text'},
+    {key:'evaluator',label:'Avaliador',type:'text'},
+    {key:'student',label:'Integrante',type:'text'},
+    {key:'leader',label:'Líder',type:'text'},
+    {key:'room',label:'Turma',type:'text'},
+    {key:'theme',label:'Tema',type:'text'},
+    {key:'showcase_status',label:'Agenda da Mostra',type:'showcase'},
+  ]
+  if(isAdmin) fields.push({key:'is_active',label:'Ativo',type:'active'})
+
+  function addFilter(){
+    if(!value.trim() && field!=='is_active') return
+    if(field==='status' || field==='showcase_status'){
+      const arr=field==='status'?filters.status:filters.showcase_status
+      if(!arr.includes(value)) {
+        const next=[...arr,value]
+        update(field==='status'?{status:next}:{showcase_status:next})
+      }
+    } else if(field==='is_active'){
+      update({is_active:value as ''|'true'|'false'})
+    } else {
+      update({[field]:value.trim()} as Partial<ProjectFilters>)
+    }
+    setValue('')
+    setAdding(false)
+  }
+
+  const chips:string[]=[]
+  if(filters.q) chips.push(`Texto: ${filters.q}`)
+  filters.status.forEach(s=>chips.push(`Status: ${STATUS_LABELS?.[s]??s}`))
+  if(filters.advisor) chips.push(`Orientador: ${filters.advisor}`)
+  if(filters.evaluator) chips.push(`Avaliador: ${filters.evaluator}`)
+  if(filters.student) chips.push(`Integrante: ${filters.student}`)
+  if(filters.leader) chips.push(`Líder: ${filters.leader}`)
+  if(filters.room) chips.push(`Turma: ${filters.room}`)
+  if(filters.theme) chips.push(`Tema: ${filters.theme}`)
+  if(filters.is_active) chips.push(`Ativo: ${filters.is_active==='true'?'Sim':'Não'}`)
+  filters.showcase_status.forEach(s=>chips.push(`Agenda: ${SHOWCASE_LABELS?.[s]??s}`))
+
+  const selectedField=fields.find(f=>f.key===field)
+
   return (
-    <section className="project-filter-bar" aria-label="Filtros de projetos">
-      <div className="filter-grid">
-        <label>Texto<input type="search" value={filters.q} onChange={e=>update({q:e.target.value})} placeholder="Título, tema, integrante…"/></label>
-        <label>Orientador<input type="search" value={filters.advisor} onChange={e=>update({advisor:e.target.value})} placeholder="Nome ou usuário"/></label>
-        <label>Avaliador<input type="search" value={filters.evaluator} onChange={e=>update({evaluator:e.target.value})} placeholder="Nome ou usuário"/></label>
-        <label>Integrante<input type="search" value={filters.student} onChange={e=>update({student:e.target.value})} placeholder="Nome, RA ou usuário"/></label>
-        <label>Líder<input type="search" value={filters.leader} onChange={e=>update({leader:e.target.value})} placeholder="Nome, RA ou usuário"/></label>
-        <label>Turma<input type="search" value={filters.room} onChange={e=>update({room:e.target.value})} placeholder="Código da turma"/></label>
-        <label>Tema<input type="search" value={filters.theme} onChange={e=>update({theme:e.target.value})} placeholder="Título do tema"/></label>
-        {isAdmin&&<label>Ativo<select value={filters.is_active} onChange={e=>update({is_active:e.target.value as ''|'true'|'false'})}><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select></label>}
-        <label>Combinar<select value={filters.combine} onChange={e=>update({combine:e.target.value as 'and'|'or'})}><option value="and">E (todos)</option><option value="or">OU (qualquer)</option></select></label>
+    <section className="project-filter-bar compact" aria-label="Filtros de projetos">
+      <div className="filter-toolbar">
+        <button className="button secondary" type="button" onClick={()=>setAdding(v=>!v)}>+ Adicionar filtro</button>
+        <label className="filter-combine">Combinar
+          <select value={filters.combine} onChange={e=>update({combine:e.target.value as 'and'|'or'})}>
+            <option value="and">E (todos)</option>
+            <option value="or">OU (qualquer)</option>
+          </select>
+        </label>
+        {chips.length>0&&<button className="button secondary" type="button" onClick={()=>onChange(emptyProjectFilters())}>Limpar filtros</button>}
+        <span className="filter-count">{chips.length} filtro(s) ativo(s)</span>
       </div>
-      <details className="filter-statuses">
-        <summary>Status do projeto e da agenda</summary>
-        <div className="filter-checkboxes">
-          <fieldset><legend>Status do projeto</legend>{PROJECT_STATUSES.map(s=><label key={s}><input type="checkbox" checked={filters.status.includes(s)} onChange={()=>toggleStatus(s)}/>{STATUS_LABELS[s]??s}</label>)}</fieldset>
-          <fieldset><legend>Agenda da Mostra</legend>{SHOWCASE_STATUSES.map(s=><label key={s}><input type="checkbox" checked={filters.showcase_status.includes(s)} onChange={()=>toggleShowcase(s)}/>{SHOWCASE_LABELS[s]??s}</label>)}</fieldset>
+      {adding&&(
+        <div className="filter-add-row">
+          <select value={field} onChange={e=>{setField(e.target.value);setValue('')}}>
+            {fields.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+          </select>
+          {selectedField?.type==='status'&&(
+            <select value={value} onChange={e=>setValue(e.target.value)}>
+              <option value="">Selecione…</option>
+              {PROJECT_STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]??s}</option>)}
+            </select>
+          )}
+          {selectedField?.type==='showcase'&&(
+            <select value={value} onChange={e=>setValue(e.target.value)}>
+              <option value="">Selecione…</option>
+              {SHOWCASE_STATUSES.map(s=><option key={s} value={s}>{SHOWCASE_LABELS[s]??s}</option>)}
+            </select>
+          )}
+          {selectedField?.type==='active'&&(
+            <select value={value} onChange={e=>setValue(e.target.value)}>
+              <option value="true">Ativos</option>
+              <option value="false">Inativos</option>
+            </select>
+          )}
+          {selectedField?.type==='text'&&(
+            <input type="search" value={value} onChange={e=>setValue(e.target.value)} placeholder="Valor…" autoFocus onKeyDown={e=>{if(e.key==='Enter')addFilter()}}/>
+          )}
+          <button className="button" type="button" onClick={addFilter} disabled={!value.trim() && field!=='is_active'}>Adicionar</button>
+          <button className="button secondary" type="button" onClick={()=>{setAdding(false);setValue('')}}>Cancelar</button>
         </div>
-      </details>
-      {activeChips.length>0&&<div className="active-filters" aria-label="Filtros ativos">{activeChips.map((chip,i)=><span key={i} className="filter-chip">{chip}</span>)}<button className="button secondary" type="button" onClick={()=>onChange(emptyProjectFilters())}>Limpar filtros</button></div>}
+      )}
+      {chips.length>0&&(
+        <div className="active-filters" aria-label="Filtros ativos">
+          {chips.map((chip,i)=><span key={i} className="filter-chip">{chip}</span>)}
+        </div>
+      )}
     </section>
   )
 }
