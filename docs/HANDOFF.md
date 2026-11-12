@@ -1,4 +1,12 @@
 # Handoff — Plataforma Extensionista
+## Retomada — 12/11/2026 (filtros GLPI-like na tabela de Projetos)
+
+- Backend: novo módulo `projects/filters.py` com `apply_project_filters` aplicado nos três endpoints (lista do aluno, professor e institucional). Filtros: texto (q/search), status (múltiplo), orientador, avaliador, integrante, líder, turma, tema, ativo, status da agenda da Mostra. Combinação global E/OU via `combine=and|or`. Permissões preservadas: admin vê todos; professor vê os que orienta/avalia; aluno vê os que participa.
+- Frontend: novo componente `ProjectFilterBar` em `projectList.tsx` com campos de texto, select de ativo (admin), select de combinação E/OU, painel de checkboxes para status do projeto e status da agenda, chips de filtros ativos e botão "Limpar filtros". Integrado nas três telas (Projetos do aluno, Professor, Institucional).
+- API: funções paginadas aceitam `extra` (Record) para repassar filtros como query params (incluindo arrays repetidos).
+- Validação real: filtro por orientador retornou 2 projetos; barra renderizada para Admin/Aluno; toggle E/OU presente. Captura `.runtime/project-filters-admin.png`.
+- Validações: 87 testes frontend + 31 backend aprovados; build + lint (warnings preexistentes) OK; Django check e makemigrations --check OK; backend saudável.
+
 ## Retomada — 12/11/2026 (correções da fusão de perfis)
 
 - Corrigido defeito residual da fusão Secretaria/Admin: `publication_workflow_views.py` agora retorna `permissions.admin` (mantendo `secretariat` como alias de compatibilidade); frontend usa `permissions.admin`. Validado via API: Admin tem `admin:true`.

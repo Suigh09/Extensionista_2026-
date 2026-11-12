@@ -154,3 +154,82 @@ export function ProjectListTable({projects,total,page,pageSize,onPageChange,onSo
     </section>
   )
 }
+
+
+export type ProjectFilters={
+  q:string
+  status:string[]
+  advisor:string
+  evaluator:string
+  student:string
+  leader:string
+  room:string
+  theme:string
+  is_active:''|'true'|'false'
+  showcase_status:string[]
+  combine:'and'|'or'
+}
+
+export function emptyProjectFilters():ProjectFilters{
+  return {q:'',status:[],advisor:'',evaluator:'',student:'',leader:'',room:'',theme:'',is_active:'',showcase_status:[],combine:'and'}
+}
+
+export function filtersToExtra(filters:ProjectFilters):Record<string,string|string[]>{
+  const extra:Record<string,string|string[]>={}
+  if(filters.status.length) extra.status=filters.status
+  if(filters.advisor) extra.advisor=filters.advisor
+  if(filters.evaluator) extra.evaluator=filters.evaluator
+  if(filters.student) extra.student=filters.student
+  if(filters.leader) extra.leader=filters.leader
+  if(filters.room) extra.room=filters.room
+  if(filters.theme) extra.theme=filters.theme
+  if(filters.is_active) extra.is_active=filters.is_active
+  if(filters.showcase_status.length) extra.showcase_status=filters.showcase_status
+  extra.combine=filters.combine
+  return extra
+}
+
+const PROJECT_STATUSES=['DRAFT','PENDING_APPROVAL','CHANGES_REQUESTED','APPROVED','COMPLETED','ARCHIVED','PAUSED','CANCELLED']
+const SHOWCASE_STATUSES=['PENDING','SCHEDULED','PRESENTED','ABSENT','CANCELLED']
+const STATUS_LABELS:Record<string,string>={'DRAFT':'Rascunho','PENDING_APPROVAL':'Aguardando aprovação','CHANGES_REQUESTED':'Ajustes solicitados','APPROVED':'Aprovado','COMPLETED':'Concluído','ARCHIVED':'Arquivado','PAUSED':'Pausado','CANCELLED':'Cancelado'}
+const SHOWCASE_LABELS:Record<string,string>={'PENDING':'Pendente','SCHEDULED':'Agendado','PRESENTED':'Apresentado','ABSENT':'Ausente','CANCELLED':'Cancelado'}
+
+export function ProjectFilterBar({filters,onChange,isAdmin}:{filters:ProjectFilters;onChange:(f:ProjectFilters)=>void;isAdmin:boolean}){
+  const update=(patch:Partial<ProjectFilters>)=>onChange({...filters,...patch})
+  const toggleStatus=(value:string)=>{const next=filters.status.includes(value)?filters.status.filter(v=>v!==value):[...filters.status,value];update({status:next})}
+  const toggleShowcase=(value:string)=>{const next=filters.showcase_status.includes(value)?filters.showcase_status.filter(v=>v!==value):[...filters.showcase_status,value];update({showcase_status:next})}
+  const activeChips:string[]=[]
+  if(filters.q) activeChips.push(`Texto: ${filters.q}`)
+  filters.status.forEach(s=>activeChips.push(`Status: ${STATUS_LABELS[s]??s}`))
+  if(filters.advisor) activeChips.push(`Orientador: ${filters.advisor}`)
+  if(filters.evaluator) activeChips.push(`Avaliador: ${filters.evaluator}`)
+  if(filters.student) activeChips.push(`Integrante: ${filters.student}`)
+  if(filters.leader) activeChips.push(`Líder: ${filters.leader}`)
+  if(filters.room) activeChips.push(`Turma: ${filters.room}`)
+  if(filters.theme) activeChips.push(`Tema: ${filters.theme}`)
+  if(filters.is_active) activeChips.push(`Ativo: ${filters.is_active==='true'?'Sim':'Não'}`)
+  filters.showcase_status.forEach(s=>activeChips.push(`Agenda: ${SHOWCASE_LABELS[s]??s}`))
+  return (
+    <section className="project-filter-bar" aria-label="Filtros de projetos">
+      <div className="filter-grid">
+        <label>Texto<input type="search" value={filters.q} onChange={e=>update({q:e.target.value})} placeholder="Título, tema, integrante…"/></label>
+        <label>Orientador<input type="search" value={filters.advisor} onChange={e=>update({advisor:e.target.value})} placeholder="Nome ou usuário"/></label>
+        <label>Avaliador<input type="search" value={filters.evaluator} onChange={e=>update({evaluator:e.target.value})} placeholder="Nome ou usuário"/></label>
+        <label>Integrante<input type="search" value={filters.student} onChange={e=>update({student:e.target.value})} placeholder="Nome, RA ou usuário"/></label>
+        <label>Líder<input type="search" value={filters.leader} onChange={e=>update({leader:e.target.value})} placeholder="Nome, RA ou usuário"/></label>
+        <label>Turma<input type="search" value={filters.room} onChange={e=>update({room:e.target.value})} placeholder="Código da turma"/></label>
+        <label>Tema<input type="search" value={filters.theme} onChange={e=>update({theme:e.target.value})} placeholder="Título do tema"/></label>
+        {isAdmin&&<label>Ativo<select value={filters.is_active} onChange={e=>update({is_active:e.target.value as ''|'true'|'false'})}><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select></label>}
+        <label>Combinar<select value={filters.combine} onChange={e=>update({combine:e.target.value as 'and'|'or'})}><option value="and">E (todos)</option><option value="or">OU (qualquer)</option></select></label>
+      </div>
+      <details className="filter-statuses">
+        <summary>Status do projeto e da agenda</summary>
+        <div className="filter-checkboxes">
+          <fieldset><legend>Status do projeto</legend>{PROJECT_STATUSES.map(s=><label key={s}><input type="checkbox" checked={filters.status.includes(s)} onChange={()=>toggleStatus(s)}/>{STATUS_LABELS[s]??s}</label>)}</fieldset>
+          <fieldset><legend>Agenda da Mostra</legend>{SHOWCASE_STATUSES.map(s=><label key={s}><input type="checkbox" checked={filters.showcase_status.includes(s)} onChange={()=>toggleShowcase(s)}/>{SHOWCASE_LABELS[s]??s}</label>)}</fieldset>
+        </div>
+      </details>
+      {activeChips.length>0&&<div className="active-filters" aria-label="Filtros ativos">{activeChips.map((chip,i)=><span key={i} className="filter-chip">{chip}</span>)}<button className="button secondary" type="button" onClick={()=>onChange(emptyProjectFilters())}>Limpar filtros</button></div>}
+    </section>
+  )
+}

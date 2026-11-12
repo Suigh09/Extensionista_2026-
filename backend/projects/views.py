@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .filters import apply_project_filters
 from .models import (
     CollaborationApplication,
     CollaborationOpportunity,
@@ -104,6 +105,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
                 )
                 .distinct()
             )
+        queryset = apply_project_filters(queryset, self.request)
         query = self.request.query_params.get("q", "").strip()[:100]
         for word in query.split():
             queryset = queryset.filter(Q(name__icontains=word) | Q(about__icontains=word))
@@ -479,7 +481,7 @@ class ProfessorProjectListView(generics.ListAPIView):
 
     def get_queryset(self):
         profile = self.request.user.professor_profile
-        return (
+        queryset = (
             Project.objects.filter(
                 is_active=True,
                 groups__is_active=True,
@@ -495,6 +497,7 @@ class ProfessorProjectListView(generics.ListAPIView):
             )
             .distinct()
         )
+        return apply_project_filters(queryset, self.request)
 
 
 class MilestoneListCreateView(generics.ListCreateAPIView):

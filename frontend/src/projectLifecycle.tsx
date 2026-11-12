@@ -1,6 +1,6 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import {assignProjectStudent,createProject,listInstitutionalProjectsPaginated,listRooms,listThemes,projectTransition,saveTheme,searchThemeStudents,updateTheme,type AcademicRoom,type EligibleStudent,type Profile,type Project,type ProjectTheme} from './api'
-import {ProjectListTable} from './projectList'
+import {ProjectFilterBar,ProjectListTable,emptyProjectFilters,filtersToExtra,type ProjectFilters} from './projectList'
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const navigate=(hash:string)=>window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível concluir a operação.'
@@ -47,7 +47,7 @@ export function ProfessorGroupAssignment({project,onChanged}:{project:Project;on
 }
 
 export function InstitutionalProjects(){
-  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[query,setQuery]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(true)
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[error,setError]=useState(''),[busy,setBusy]=useState(true),[filters,setFilters]=useState<ProjectFilters>(emptyProjectFilters())
   const pageSize=100
   const handleInstSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
@@ -56,15 +56,16 @@ export function InstitutionalProjects(){
   }
   const handleInstPageChange=(np:number)=>{
     setPage(np)
+    setBusy(true)
   }
   useEffect(()=>{
     let active=true
     setBusy(true);setError('')
-    void listInstitutionalProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField}`,page,pageSize)
+    void listInstitutionalProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(e=>{if(active)setError(failure(e))})
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
-  },[query,page,sortField,sortDir])
-  return <section aria-busy={busy}><h2>Projetos institucionais</h2><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label>{error&&<p role="alert" className="alert error">{error}</p>}{busy?<p role="status">Carregando projetos…</p>:!error&&<div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleInstPageChange} onSort={handleInstSort} sortField={sortField} sortDir={sortDir}/></div>}</section>
+  },[filters,page,sortField,sortDir])
+  return <section aria-busy={busy}><h2>Projetos institucionais</h2><ProjectFilterBar filters={filters} onChange={f=>{setFilters(f);setPage(1)}} isAdmin={true}/>{error&&<p role="alert" className="alert error">{error}</p>}{busy?<p role="status">Carregando projetos…</p>:!error&&<div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleInstPageChange} onSort={handleInstSort} sortField={sortField} sortDir={sortDir}/></div>}</section>
 }

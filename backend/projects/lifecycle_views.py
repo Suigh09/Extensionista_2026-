@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .filters import apply_project_filters
 from .lifecycle import assign_student, is_admin, require_room_manager, transition
 from .models import Project, ProjectTheme
 from .pagination import ProjectPagination
@@ -196,7 +197,7 @@ class InstitutionalProjectsView(generics.ListAPIView):
     def get_queryset(self):
         if not is_admin(self.request.user):
             raise PermissionDenied("Área disponível ao Administrador.")
-        return (
+        queryset = (
             Project.objects.all()
             .select_related("class_offering", "theme")
             .prefetch_related(
@@ -207,3 +208,4 @@ class InstitutionalProjectsView(generics.ListAPIView):
             )
             .distinct()
         )
+        return apply_project_filters(queryset, self.request)

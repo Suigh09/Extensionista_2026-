@@ -1,6 +1,6 @@
 import{FormEvent,lazy,Suspense,useEffect,useRef,useState}from'react'
 import{applyToCollaboration,approveProject,attachmentUrl,closeRoom,createCollaborationOpportunity,createExpertise,createFollowUp,createRoom,createUser,decideCollaboration,decideInvitation,decideRoomTransfer,deleteExpertise,getProject,getSession,inviteStudent,listAcademicEligibleStudents,listCollaborationOpportunities,listCourses,listEligibleStudents,listMyExpertise,listMyInvitations,listProfessorProjectsPaginated,listProjectInvitations,listProjects,listProjectsPaginated,listRooms,listRoomStudents,listRoomTransferRequests,listTimeline,listUsers,login,logout,pullStudent,requestProjectChanges,submitProjectForApproval,updateProject,updateExpertise,type AcademicRoom,type AcademicItem,type CollaborationOpportunity,type EligibleStudent,type Expertise,type Invitation,type NewUser,type Profile,type Project,type ProjectStatus,type Role,type RoomStudent,type RoomTransferRequest,type TimelineItem}from'./api'
-import{ProjectListTable}from'./projectList'
+import{ProjectFilterBar,ProjectListTable,emptyProjectFilters,filtersToExtra,type ProjectFilters}from'./projectList'
 import{usePageMotion}from'./motion'
 import{ThemeProjectCreate,ThemeManagement,LifecyclePanel,ProfessorGroupAssignment,InstitutionalProjects}from'./projectLifecycle'
 import{DeliveriesPanel,ForwardedQueue}from'./deliveries'
@@ -162,8 +162,7 @@ function CandidateAction({opportunity,projects,onApply,onCancel}:{opportunity:Co
 function ProjectCreatePage({user}:{user:Profile}){return <ThemeProjectCreate user={user}/>}
 
 function ProjectsPanel({user}:{user:Profile}){
-  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null)
-  const[query,setQuery]=useState('')
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null),[filters,setFilters]=useState<ProjectFilters>(emptyProjectFilters())
   const pageSize=100
   const handleProjectSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
@@ -179,20 +178,20 @@ function ProjectsPanel({user}:{user:Profile}){
   useEffect(()=>{
     let active=true
     setBusy(true);setMessage('')
-    void listProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize)
+    void listProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
-  },[query,page,pageSize,sortField,sortDir])
-  const projectsContent = busy ? <p>Carregando projetos…</p> : <ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handlePageChange} onSort={handleProjectSort} sortField={sortField} sortDir={sortDir}/>
+  },[filters,page,sortField,sortDir])
   async function decide(id:string,decision:'accept'|'decline'|'cancel',replace=false){try{await decideInvitation(id,decision,replace);setSwitchInvite(null);setMessage(decision==='accept'?'Convite aceito.':decision==='decline'?'Convite recusado.':'Convite cancelado.');await loadInvitations();setPage(1)}catch(reason){setSwitchInvite(null);setMessage(reason instanceof Error?reason.message:'Falha ao decidir convite')}}
   if(!user.profile?.active_room)return <section className="management"><div><h2>Meus projetos</h2><p className="empty-state">Você ainda não possui uma sala ativa. Um professor precisa incluí-lo em uma sala antes da criação de novos projetos.</p></div></section>
   const pending=invitations.filter(item=>item.status==='PENDING')
-  return <section className="projects-area" aria-labelledby="projects-title"><div className="projects-header"><div><span className="eyebrow">Controle acadêmico</span><h2 id="projects-title">Meus projetos</h2><p>Turma: {user.profile.class_offering_label}</p></div><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button></div>{message&&<p role="status" className="alert">{message}</p>}<div className="projects-blocos">
+  const projectsContent = busy ? <p>Carregando projetos…</p> : <ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handlePageChange} onSort={handleProjectSort} sortField={sortField} sortDir={sortDir}/>
+  return <section className="projects-area" aria-labelledby="projects-title"><div className="projects-header"><div><span className="eyebrow">Controle acadêmico</span><h2 id="projects-title">Meus projetos</h2><p>Turma: {user.profile.class_offering_label}</p></div><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button></div>{message&&<p role="status" className="alert">{message}</p>}<ProjectFilterBar filters={filters} onChange={f=>{setFilters(f);setPage(1)}} isAdmin={false}/><div className="projects-blocos">
     <div className="projects-main">
       <section className="bloco" aria-labelledby="projects-table-title">
-        <header className="bloco-header"><div><h3 id="projects-table-title">Lista de projetos</h3><p>Ordenados pela última atualização. Clique em um projeto para abrir.</p></div><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></header>
+        <header className="bloco-header"><div><h3 id="projects-table-title">Lista de projetos</h3><p>Ordenados pela última atualização. Clique em um projeto para abrir.</p></div></header>
         <div className="project-table-wrap">{projectsContent}</div>
       </section>
     </div>
@@ -204,7 +203,6 @@ function ProjectsPanel({user}:{user:Profile}){
     </aside>
   </div>{switchInvite&&<div className="modal-backdrop"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="switch-title"><h2 id="switch-title">Você já possui um grupo vigente</h2><p>Você já participa de <strong>{projects[0]?.name}</strong>. Solicite o cancelamento na página desse projeto e aguarde a decisão da Secretaria antes de aceitar outro grupo.</p><div className="action-row"><button className="button" onClick={()=>navigateTo(`#/projects/${projects[0]?.id}`)}>Abrir projeto vigente</button><button className="button secondary" onClick={()=>setSwitchInvite(null)}>Cancelar</button></div></section></div>}</section>
 }
-
 function ProjectGroupPanel({project,onChanged}:{project:Project;onChanged:()=>Promise<void>}){
   const[query,setQuery]=useState(''),[eligible,setEligible]=useState<EligibleStudent[]>([]),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[searching,setSearching]=useState(false)
   async function refreshInvitations(){setInvitations(await listProjectInvitations(project.id))}
@@ -280,7 +278,7 @@ function ProfessorExpertise(){
 }
 
 function ProfessorProjectOverview(){
-  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[query,setQuery]=useState('')
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[filters,setFilters]=useState<ProjectFilters>(emptyProjectFilters())
   const pageSize=100
   const handleProfessorSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
@@ -294,16 +292,15 @@ function ProfessorProjectOverview(){
   useEffect(()=>{
     let active=true
     setBusy(true);setMessage('')
-    void listProfessorProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize)
+    void listProfessorProjectsPaginated(filters.q,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize,filtersToExtra(filters))
       .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
       .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
-  },[query,page,pageSize,sortField,sortDir])
+  },[filters,page,sortField,sortDir])
   if(message)return <p role="alert" className="alert error">{message}</p>
-  return <section aria-busy={busy}><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label>{busy?<p role="status">Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
+  return <section aria-busy={busy}><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div><ProjectFilterBar filters={filters} onChange={f=>{setFilters(f);setPage(1)}} isAdmin={false}/><label>Pesquisar projetos<input type="search" value={filters.q} onChange={e=>setFilters({...filters,q:e.target.value})}/></label>{busy?<p role="status">Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
 }
-
 function UserManagement(){
   const[users,setUsers]=useState<Profile[]>([]),[role,setRole]=useState<Role>('STUDENT'),[courses,setCourses]=useState<AcademicItem[]>([]),[message,setMessage]=useState('')
   useEffect(()=>{listUsers().then(setUsers).catch(()=>setUsers([]))},[])

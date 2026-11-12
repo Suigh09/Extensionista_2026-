@@ -2,6 +2,8 @@
 
 ## Concluídas
 
+- 12/11/2026: filtros GLPI-like na tabela de Projetos — backend `projects/filters.py` (status, orientador, avaliador, integrante, líder, turma, tema, ativo, agenda; E/OU) aplicado nos três endpoints respeitando permissões; frontend `ProjectFilterBar` integrado nas três telas com chips ativos e "Limpar filtros". 87 testes frontend + 31 backend + build + lint aprovados.
+
 - 12/11/2026: correções residuais da fusão Secretaria/Admin — `permissions.admin` exposto no workflow de publicação (alias `secretariat` mantido), opção duplicada "Administrador" removida do formulário de usuários. Banco verificado sem SECRETARIAT. 87 testes frontend + 31 backend + build + lint aprovados.
 
 - 06/11/2026: tela de projetos em lista com paginação (100 por página) implementada para aluno, professor e Secretaria/Admin. Ordenação por última atualização. Frontend: novo componente ProjectListTable. Backend: paginação e ordenação em ProjectListCreateView, ProfessorProjectListView e InstitutionalProjectsView. 86 testes frontend aprovados, build OK.

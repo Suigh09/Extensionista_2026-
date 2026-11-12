@@ -47,7 +47,7 @@ export type PaginatedProjects={
   results:Project[]
 }
 
-export const listProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100,extra:Record<string,string|string[]>={})=>{const params=new URLSearchParams({search:query,ordering,page:String(page),page_size:String(pageSize)});Object.entries(extra).forEach(([k,v])=>{if(Array.isArray(v)){v.forEach(item=>{if(item)params.append(k,item)})}else if(v){params.set(k,v)}});return request<PaginatedProjects>(`/projects/?${params.toString()}`)}
 export const getProject=(projectId:string)=>request<Project>(`/projects/${projectId}/`)
 export const createProject=(project:{name:string;about:string;theme:string;leader?:number;student_ids?:number[]})=>request<Project>('/projects/',{method:'POST',body:JSON.stringify(project)})
 export const updateProject=(projectId:string,project:{name:string;about:string})=>request<Project>(`/projects/${projectId}/`,{method:'PATCH',body:JSON.stringify(project)})
@@ -66,7 +66,7 @@ export const listTimeline=(projectId:string)=>request<TimelineItem[]>(`/projects
 export const listProjectMilestones=(projectId:string)=>request<Milestone[]>(`/projects/${projectId}/milestones/`)
 export const listProfessorProjects=()=>request<Project[]>('/projects/available-to-professor/')
 
-export const listProfessorProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/available-to-professor/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listProfessorProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100,extra:Record<string,string|string[]>={})=>{const params=new URLSearchParams({search:query,ordering,page:String(page),page_size:String(pageSize)});Object.entries(extra).forEach(([k,v])=>{if(Array.isArray(v)){v.forEach(item=>{if(item)params.append(k,item)})}else if(v){params.set(k,v)}});return request<PaginatedProjects>(`/projects/available-to-professor/?${params.toString()}`)}
 export const listMilestones=()=>request<Milestone[]>('/projects/milestones/')
 export const createMilestone=(data:{title:string;description:string;due_at:string;scope:'PROJECTS'|'CLASS';requires_delivery:boolean;requires_approval:boolean;class_offering?:string;project_ids?:string[]})=>request<Milestone>('/projects/milestones/',{method:'POST',body:JSON.stringify(data)})
 export const listCollaborationOpportunities=(query='')=>request<CollaborationOpportunity[]>(`/projects/collaborations/opportunities/?q=${encodeURIComponent(query)}`)
@@ -96,7 +96,7 @@ export const projectTransition=(id:string,action:string,reason:string)=>request<
 export const assignProjectStudent=(id:string,student_id:number,make_leader=false)=>request<Project>(`/projects/${id}/assign-student/`,{method:'POST',body:JSON.stringify({student_id,make_leader})})
 export const listInstitutionalProjects=()=>request<Project[]>('/projects/institutional/')
 
-export const listInstitutionalProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/institutional/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listInstitutionalProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100,extra:Record<string,string|string[]>={})=>{const params=new URLSearchParams({search:query,ordering,page:String(page),page_size:String(pageSize)});Object.entries(extra).forEach(([k,v])=>{if(Array.isArray(v)){v.forEach(item=>{if(item)params.append(k,item)})}else if(v){params.set(k,v)}});return request<PaginatedProjects>(`/projects/institutional/?${params.toString()}`)}
 
 export type DeliveryStatus='SUBMITTED'|'APPROVED'|'CHANGES_REQUESTED'
 export type Delivery={id:string;project:string;group:string;group_name:string;version:number;title_snapshot:string;about_snapshot:string;notes:string;original_name:string;content_type:string;size:number;status:DeliveryStatus;submitted_by_name:string;submitted_at:string;review_feedback:string;reviewed_by_name:string|null;reviewed_at:string|null;download_url:string}
