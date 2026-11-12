@@ -2,6 +2,8 @@
 
 ## Concluídas
 
+- 12/11/2026: correções residuais da fusão Secretaria/Admin — `permissions.admin` exposto no workflow de publicação (alias `secretariat` mantido), opção duplicada "Administrador" removida do formulário de usuários. Banco verificado sem SECRETARIAT. 87 testes frontend + 31 backend + build + lint aprovados.
+
 - 06/11/2026: tela de projetos em lista com paginação (100 por página) implementada para aluno, professor e Secretaria/Admin. Ordenação por última atualização. Frontend: novo componente ProjectListTable. Backend: paginação e ordenação em ProjectListCreateView, ProfessorProjectListView e InstitutionalProjectsView. 86 testes frontend aprovados, build OK.
 - 06/11/2026: perfis Secretaria e Admin unificados em Administrador (ADMIN). Migração 0008_convert_secretariat_to_admin aplicada. Todas as verificações de permissão usam role == "ADMIN".
 - 06/11/2026: commit 33b05d0 enviado ao GitHub origin/main com todas as alterações de implementação.
@@ -124,6 +126,9 @@
 - Validação CI: `ruff check backend` OK; `manage.py check` OK; `makemigrations --check --dry-run` OK; pytest backend **92% coverage** (mínimo 85%); `npm run lint` OK (0 erros); `npm run build` OK
 
 ## Em andamento
+
+- 12/11/2026: corrigir lista geral de Projetos ainda relatada como cards. Vite com root errado diagnosticado; pendentes composição Admin, contrato paginado, colunas, escopos e validação real. Resultados anteriores não comprovam esta tarefa.
+- 12/11/2026, escopo curto concluído: tabela única de Projetos nos três perfis (Admin/Professor/Aluno) com 10 colunas incluindo Sala/Turma e Agenda da Mostra; backend paginado (máx. 100) e prefetch de showcase; 87 testes frontend e 31 backend aprovados; validação real nos três perfis sem erros JS. Restam ordenação por última interação real, toggle de colunas opcionais e revisão de migrações da fusão de roles.
 
 
 

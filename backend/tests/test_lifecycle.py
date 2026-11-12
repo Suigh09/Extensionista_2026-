@@ -314,7 +314,7 @@ def test_cancel_request_admin_decision_release_and_immutable_history(academic_co
     assert client.get(f"/api/v1/projects/{project['id']}/").status_code == 200
     assert GroupMember.objects.filter(student=profile, group__project_id=project["id"]).exists()
     assert create_project(client, offering, approved=False).status_code == 201
-    assert len(client.get("/api/v1/projects/").json()) == 2
+    assert len(client.get("/api/v1/projects/").json()["results"]) == 2
 
 
 @pytest.mark.django_db

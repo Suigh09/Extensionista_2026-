@@ -157,8 +157,8 @@ describe('App',()=>{
       if(url.includes('/auth/session/'))return new Response(JSON.stringify(withClass),{status:200})
       if(url.includes('/projects/themes/'))return new Response(JSON.stringify([{id:'theme-1',title:'Tema Cidadania',description:'Orientações',room:'room-1',room_name:'Sala Teste',is_open:true,max_projects:null,project_count:0}]),{status:200})
       if(url.includes('/auth/csrf/'))return new Response(JSON.stringify({csrfToken:'token'}),{status:200})
-      if(url.includes('/projects/?q=')&&method==='GET'&&!url.includes('ordering'))return new Response(JSON.stringify(created?[project]:[]),{status:200})
-      if(url.includes('/projects/?q=')&&method==='GET'&&url.includes('ordering'))return new Response(JSON.stringify({count:created?1:0,next:null,previous:null,results:created?[project]:[]}),{status:200})
+      if(url.includes('/projects/?search=')&&method==='GET'&&!url.includes('ordering'))return new Response(JSON.stringify(created?[project]:[]),{status:200})
+      if(url.includes('/projects/?search=')&&method==='GET'&&url.includes('ordering'))return new Response(JSON.stringify({count:created?1:0,next:null,previous:null,results:created?[project]:[]}),{status:200})
       if(url.endsWith('/projects/project-1/')&&method==='GET')return new Response(JSON.stringify(project),{status:200})
       if(url.endsWith('/projects/')&&method==='POST'){created=true;return new Response(JSON.stringify(project),{status:201})}
       if(url.includes('/invitations/mine/'))return new Response('[]',{status:200})
@@ -190,10 +190,10 @@ describe('App',()=>{
     const withClass={...student,profile:{...student.profile,class_offering:'class-1',class_offering_label:'A · 2026.2',active_room:{id:'room-1',name:'Sala Teste',status:'ACTIVE',professor_name:'Professor Teste'},projects:[]}}
     vi.spyOn(globalThis,'fetch').mockImplementation(async(input,init)=>{
       const url=String(input)
-      const method=(init as any)?.method??'GET'
+      const method=(init as {method?:string})?.method??'GET'
       if(url.includes('/auth/session/'))return new Response(JSON.stringify(withClass),{status:200})
-      if(url.includes('/projects/?q=')&&method==='GET'&&!url.includes('ordering'))return new Response('[]',{status:200})
-      if(url.includes('/projects/?q=')&&method==='GET'&&url.includes('ordering'))return new Response(JSON.stringify({count:0,next:null,previous:null,results:[]}),{status:200})
+      if(url.includes('/projects/?search=')&&method==='GET'&&!url.includes('ordering'))return new Response('[]',{status:200})
+      if(url.includes('/projects/?search=')&&method==='GET'&&url.includes('ordering'))return new Response(JSON.stringify({count:0,next:null,previous:null,results:[]}),{status:200})
       if(url.includes('/invitations/mine/'))return new Response('[]',{status:200})
       return new Response('{}',{status:403})
     })
@@ -220,7 +220,7 @@ describe('App',()=>{
     vi.spyOn(globalThis,'fetch').mockImplementation(async input=>{
       const url=String(input)
       if(url.includes('/auth/session/'))return new Response(JSON.stringify(student),{status:200})
-      if(url.includes('/collaborations/opportunities/')||url.includes('/projects/?q='))return new Response('[]',{status:200})
+      if(url.includes('/collaborations/opportunities/')||url.includes('/projects/?search='))return new Response('[]',{status:200})
       return new Response('{}',{status:403})
     })
     render(<App/>);await screen.findByRole('heading',{name:'Início'})
@@ -240,6 +240,7 @@ describe('App',()=>{
       if(url.includes('/auth/csrf/'))return new Response(JSON.stringify({csrfToken:'token'}),{status:200})
       if(url.includes('/collaborations/opportunities/')&&method==='GET')return new Response(JSON.stringify(published?[opportunity]:[]),{status:200})
       if(url.includes('/collaborations/opportunities/')&&method==='POST'){published=true;return new Response(JSON.stringify(opportunity),{status:201})}
+      if(url.includes('/projects/?search='))return new Response(JSON.stringify({count:1,next:null,previous:null,results:[project]}),{status:200})
       if(url.includes('/projects/?q='))return new Response(JSON.stringify([project]),{status:200})
       return new Response('{}',{status:403})
     })

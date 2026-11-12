@@ -1,4 +1,45 @@
 # Handoff — Plataforma Extensionista
+## Retomada — 12/11/2026 (correções da fusão de perfis)
+
+- Corrigido defeito residual da fusão Secretaria/Admin: `publication_workflow_views.py` agora retorna `permissions.admin` (mantendo `secretariat` como alias de compatibilidade); frontend usa `permissions.admin`. Validado via API: Admin tem `admin:true`.
+- Removida opção duplicada "Administrador" no formulário de criação de usuário (`App.tsx`).
+- Verificado no banco: nenhum usuário com role `SECRETARIAT`, nenhum documento com workflow `SECRETARIAT`; migrações históricas já aplicadas sem inconsistência.
+- Validações: 87 testes frontend + 31 backend + build + lint (warning preexistente) aprovados; Django check e makemigrations --check OK; backend saudável.
+
+
+## Retomada — 12/11/2026 (escopo curto concluído): tabela única de Projetos
+
+- HEAD 6e7d3c2, branch main. Alterações não commitadas desta etapa preservadas.
+- Unificada a tela de Projetos nos três perfis (Admin, Professor, Aluno) na mesma `ProjectListTable` com 10 colunas: `#`, `Título` (+grupo/tema), `Status`, `Sala/Turma`, `Líder`, `Orientador`, `Avaliador`, `Agenda da Mostra`, `Última atualização`, `Ação`.
+- Admin continua vendo todos (ativos e inativos); professor vê os que orienta/avalia; aluno vê os que participa. Visibilidade garantida pelos querysets existentes.
+- Backend: `ProjectListCreateView`, `ProfessorProjectListView` e `InstitutionalProjectsView` passaram a usar `ProjectPagination` (máx. 100 por página, `page_size` query param limitado a 100), prefetch de `groups__showcase_entry`; `ProjectSerializer` expõe `class_offering_label` e `showcase_entry` (data, fim, status, local).
+- Frontend: `ProjectsPanel` e `ProfessorProjectOverview` migrados de arrays locais para `listProjectsPaginated`/`listProfessorProjectsPaginated`; busca/ordenação/paginação reais; convites de aluno permanecem abaixo da tabela.
+- Agenda da Mostra aparece como data/hora + status (Pendente/Agendado/Apresentado/Ausente/Cancelado); `—` quando não agendado.
+- Tema virou subtítulo do título para economizar coluna.
+- Removido checkbox órfão no cabeçalho e corrigido deslocamento de colunas; líder agora resolvido por `user_id === leader_user_id` (UUID), sem adivinhar o primeiro integrante.
+- Células não são mais ocultadas no mobile; tabela usa scroll horizontal.
+- Validação real: Admin (fluxo.secretaria) 6 projetos, Professor (fluxo.orientador) 2, Aluno (fluxo.aluno1) 1; todos com as 10 colunas e sem erros JS em 1440/390px. Capturas `.runtime/project-list-admin-1600.png` e `...-390.png`. Runner `.runtime/validate_project_list.cjs`.
+- Testes: 87 frontend aprovados; 31 backend (projects/lifecycle/project_list) aprovados; Ruff nos arquivos alterados aprovado; build aprovado; lint apenas warning preexistente de Fast Refresh em projectLifecycle.tsx.
+- Implementado também toggle de colunas opcionais (Criador, Integrantes, Envio, Revisão) com persistência em localStorage e validação real de ocultar/persistir. Publicação no acervo segue fora do toggle (sem dado no payload).
+- Pendentes: ordenação por última interação real (follow-ups/notas não atualizam `Project.updated_at`); revisão das migrações históricas alteradas na fusão de roles; CI remoto.
+
+
+## Retomada — 12/11/2026: lista de Projetos ainda não validada
+
+- HEAD `6e7d3c2`, branch main. Alegações anteriores de lista pronta não comprovam o relato atual do usuário.
+- Diagnóstico: Vite PID 42224 servia a raiz do repositório (`/` 404, `/frontend/index.html` 200), sem proxy configurado. Reiniciado somente esse processo com root frontend absoluto. Navegador agora exibe login em `/`.
+- Código Admin ainda coloca `ForwardedQueue` (cards) antes da tabela; `InstitutionalProjects` espera array de endpoint paginado. Investigar/corrigir esses dois defeitos antes de atribuir a cache.
+- Plano: corrigir composição/contrato Admin, alinhar colunas e testar API/UI reais; depois validar demais perfis, paginação de 100 e interação recente. Preservar dados #5/#6, sem agendar/avaliar/publicar.
+- Não rastreados preexistentes: `.vite/`, `frontend/start_vite.bat`, `scripts/create_test_data.py`; preservados. Sem commit/push nesta retomada.
+
+### Resultado desta etapa
+
+- Admin: tabela principal antes da fila, agora expansível; busca/ordenação/paginação consumindo `results/count`, sem fatiar página recebida. Paginator DRF dedicado fixa máximo 100. Listagem institucional inclui inativos; teste isolado com 101 registros passou, incluindo busca e negação ao aluno.
+- Corrigidos cabeçalho extra, liderança por UUID de usuário, campos de ordenação de datas, horário e células ocultas no mobile. Sem líder registrado, mostra travessão em vez de adivinhar primeiro integrante.
+- UI/API/PostgreSQL reais como `fluxo.secretaria`: 6 projetos em tabela, 10 cabeçalhos/10 células, sem cards visíveis principais, sem erros JS; desktop 1600 e mobile 390. Capturas `.runtime/project-list-admin-1600.png` e `...-390.png`, runner `.runtime/validate_project_list.cjs`; senha via DPAPI/ambiente, sem impressão. Nenhum ato acadêmico enviado. O #6 já tem avaliador na resposta atual; não presumir que a fotografia antiga sem avaliador continue válida.
+- Backend reconstruído/recriado; `manage.py check` passou. Sem novas migrações/schema nesta etapa. Tag/commit de rollback da imagem antiga falharam por digest ausente, limitação preexistente; reversão do código via HEAD + rebuild, sem restaurar bancos. Não afirmar imagem antiga preservada.
+- Validações: build frontend OK; 87 testes frontend/cobertura configurada 90,73%; teste backend novo OK; Ruff nos três arquivos backend alterados OK; diff --check OK. Lint global encontrou erros preexistentes em App.tsx/App.test.tsx (imports/estados não usados e any); não declarar gate global verde. Ajustados avisos locais de imports/const da tabela.
+- Pendentes: demais perfis ainda usam contrato de array com endpoint paginado, ordenação por interação relacionada (atualmente updated_at do projeto), revisão da fusão de roles/migrações e lint global. Próxima etapa exige modelo forte por envolver permissões e consulta de interações; não está encerrado o pedido completo para todos os perfis.
 
 ## Implementação atual — acervo completo, 06/11/2026
 

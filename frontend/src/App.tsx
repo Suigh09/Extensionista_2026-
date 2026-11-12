@@ -1,5 +1,5 @@
 import{FormEvent,lazy,Suspense,useEffect,useRef,useState}from'react'
-import{applyToCollaboration,approveProject,attachmentUrl,closeRoom,createCollaborationOpportunity,createExpertise,createFollowUp,createRoom,createUser,decideCollaboration,decideInvitation,decideRoomTransfer,deleteExpertise,getProject,getSession,inviteStudent,listAcademicEligibleStudents,listCollaborationOpportunities,listCourses,listEligibleStudents,listMyExpertise,listMyInvitations,listProfessorProjects,listProfessorProjectsPaginated,listProjectInvitations,listProjects,listProjectsPaginated,listRooms,listRoomStudents,listRoomTransferRequests,listTimeline,listUsers,login,logout,pullStudent,requestProjectChanges,submitProjectForApproval,updateProject,updateExpertise,type AcademicRoom,type AcademicItem,type CollaborationOpportunity,type EligibleStudent,type Expertise,type Invitation,type NewUser,type Profile,type Project,type ProjectStatus,type Role,type RoomStudent,type RoomTransferRequest,type TimelineItem}from'./api'
+import{applyToCollaboration,approveProject,attachmentUrl,closeRoom,createCollaborationOpportunity,createExpertise,createFollowUp,createRoom,createUser,decideCollaboration,decideInvitation,decideRoomTransfer,deleteExpertise,getProject,getSession,inviteStudent,listAcademicEligibleStudents,listCollaborationOpportunities,listCourses,listEligibleStudents,listMyExpertise,listMyInvitations,listProfessorProjectsPaginated,listProjectInvitations,listProjects,listProjectsPaginated,listRooms,listRoomStudents,listRoomTransferRequests,listTimeline,listUsers,login,logout,pullStudent,requestProjectChanges,submitProjectForApproval,updateProject,updateExpertise,type AcademicRoom,type AcademicItem,type CollaborationOpportunity,type EligibleStudent,type Expertise,type Invitation,type NewUser,type Profile,type Project,type ProjectStatus,type Role,type RoomStudent,type RoomTransferRequest,type TimelineItem}from'./api'
 import{ProjectListTable}from'./projectList'
 import{usePageMotion}from'./motion'
 import{ThemeProjectCreate,ThemeManagement,LifecyclePanel,ProfessorGroupAssignment,InstitutionalProjects}from'./projectLifecycle'
@@ -15,7 +15,6 @@ import{ShowcaseScheduler}from'./showcaseScheduler'
 const HomeVisual=lazy(()=>import('./experience'))
 
 const labels:Record<Role,string>={STUDENT:'Aluno',PROFESSOR:'Professor',ADMIN:'Administrador'}
-const groupLabels={FORMING:'Em formação',FORMED:'Grupo formado',COMPLETE:'Grupo completo'}
 const projectStatusLabels:Record<ProjectStatus,string>={DRAFT:'Rascunho',PENDING_APPROVAL:'Aguardando aprovação',CHANGES_REQUESTED:'Ajustes solicitados',APPROVED:'Aprovado',COMPLETED:'Concluído',ARCHIVED:'Arquivado',PAUSED:'Pausado',CANCELLED:'Cancelado'}
 type Page='home'|'projects'|'project-create'|'project'|'collaborations'|'rooms'|'evaluations'|'evaluator-designation'|'group-evaluation'|'individual-grades'|'archive'|'acervo-publico'|'admin'|'profile'|'showcase'|'showcase-presence'|'publication-documents'|'publication-form'|'publication'|'user-import'|'showcase-schedule'
 const pageTitles:Record<Page,string>={home:'Início',projects:'Projetos','project-create':'Criar projeto',project:'Projeto',collaborations:'Colaborações Acadêmicas',rooms:'Salas',evaluations:'Avaliações','evaluator-designation':'Designar avaliador','group-evaluation':'Avaliação de grupo','individual-grades':'Notas individuais',archive:'Acervo','acervo-publico':'Acervo público',admin:'Administração',profile:'Meu perfil',showcase:'Agenda da Mostra','showcase-presence':'Registro de presença','publication-documents':'Documento publicável','publication-form':'Formulário do documento',publication:'Publicação no acervo','user-import':'Importar usuários','showcase-schedule':'Agendamento da Mostra'}
@@ -124,7 +123,7 @@ function HomePage({user,onNavigate}:{user:Profile;onNavigate:(page:Page)=>void})
   return <><section className="home-hero"><div className="home-hero-copy"><span className="eyebrow">Bem-vindo</span><h2>Olá, {user.name||user.username}</h2><p>{copy}</p><span className="system-status"><i aria-hidden="true"/>Ambiente acadêmico disponível</span></div><Suspense fallback={<div className="home-visual home-visual-fallback" aria-hidden="true"><span className="visual-fallback-mark">E</span></div>}><HomeVisual/></Suspense><div className="home-profile"><span className="avatar" aria-hidden="true">{(user.name||user.username).slice(0,1).toUpperCase()}</span><strong>{labels[user.role]}</strong><small>{user.username}</small></div></section><section aria-labelledby="shortcuts-title"><div className="subheading"><h2 id="shortcuts-title">Acesso rápido</h2><p>Escolha uma área para continuar.</p></div><div className="module-grid">{shortcuts.map(([target,title,description])=><button key={target} className="module-card motion-card" onClick={()=>onNavigate(target)}><span>{title}</span><p>{description}</p><strong>Acessar →</strong></button>)}</div></section><section className="notice-card"><div><span className="badge neutral">Visão personalizada</span><h2>Seu painel evolui com o projeto</h2><p>Novos módulos aparecerão aqui quando suas funcionalidades forem entregues e validadas.</p></div></section></>
 }
 
-function ProjectsPage({user}:{user:Profile}){if(user.role==='STUDENT')return <ProjectsPanel user={user}/>;if(user.role==='PROFESSOR')return <><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button><ThemeManagement/><ProfessorProjectOverview/></>;return <><ForwardedQueue/><InstitutionalProjects/></>}
+function ProjectsPage({user}:{user:Profile}){if(user.role==='STUDENT')return <ProjectsPanel user={user}/>;if(user.role==='PROFESSOR')return <><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button><ThemeManagement/><ProfessorProjectOverview/></>;return <><InstitutionalProjects/><details><summary>Encaminhamentos para a Mostra</summary><ForwardedQueue/></details></>}
 
 function ProfilePage({user}:{user:Profile}){return <>{user.role==='STUDENT'&&<StudentRoomCard room={user.profile?.active_room}/>}<ProfileCore user={user}/>{user.role==='PROFESSOR'&&<ProfessorExpertise/>}</>}
 
@@ -137,7 +136,6 @@ function ProfileCore({user}:{user:Profile}){
 function ProjectResponsibility({title,projects}:{title:string;projects:NonNullable<NonNullable<Profile['profile']>['advising_projects']>}){return <section><h3>{title}</h3>{projects.length===0?<p className="empty-state compact">Nenhum projeto.</p>:projects.map(project=><button className="responsibility-card" key={project.id} onClick={()=>{window.location.hash=`#/projects/${project.id}`}}><span>{project.name}</span><small>{projectStatusLabels[project.status]}</small></button>)}</section>}
 
 function StudentRoomCard({room}:{room:NonNullable<Profile['profile']>['active_room']}){return <section className="profile-section"><div className="subheading"><h2>Minha sala</h2><p>Seu vínculo define o professor orientador dos novos projetos.</p></div>{room?<div className="room-summary"><span className="badge">Sala ativa</span><h3>{room.name}</h3><p>{room.academic_identifier||'Sem identificação acadêmica adicional'}</p><strong>Professor responsável: {room.professor_name||'Não informado'}</strong></div>:<p className="empty-state">Você ainda não possui uma sala ativa. Procure seu professor ou a secretaria antes de criar um projeto.</p>}</section>}
-
 
 function MobileNavigation({primary,secondary,page,onNavigate}:{primary:[Page,string][];secondary:[Page,string][];page:Page;onNavigate:(page:Page)=>void}){return <nav className="mobile-navigation" aria-label="Navegação móvel">{primary.map(([target,label])=><button key={target} aria-current={page===target?'page':undefined} className={page===target?'active':''} onClick={()=>onNavigate(target)}>{label}</button>)}<details className="mobile-more"><summary aria-label="Mais áreas">Mais</summary><div>{secondary.map(([target,label])=><button key={target} aria-current={page===target?'page':undefined} className={page===target?'active':''} onClick={event=>{onNavigate(target);event.currentTarget.closest('details')?.removeAttribute('open')}}>{label}</button>)}</div></details></nav>}
 
@@ -164,8 +162,9 @@ function CandidateAction({opportunity,projects,onApply,onCancel}:{opportunity:Co
 function ProjectCreatePage({user}:{user:Profile}){return <ThemeProjectCreate user={user}/>}
 
 function ProjectsPanel({user}:{user:Profile}){
-  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null)
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[invitations,setInvitations]=useState<Invitation[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[switchInvite,setSwitchInvite]=useState<Invitation|null>(null)
   const[query,setQuery]=useState('')
+  const pageSize=100
   const handleProjectSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
     setSortDir(dir)
@@ -175,29 +174,25 @@ function ProjectsPanel({user}:{user:Profile}){
     setPage(np)
     setBusy(true)
   }
-  async function refresh(){setBusy(true);try{const[data,i]=await Promise.all([listProjects(query),listMyInvitations()]);setProjects(data);setTotal(data.length);setInvitations(i)}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}finally{setBusy(false)}}
-  let ordering='-updated_at'
-  if(sortField){
-    ordering=(sortDir==='desc'?'-':'+')+sortField
-  }
-  const ordered=[...projects].sort((a,b)=>{
-    const aDate=new Date(a.updated_at).getTime()
-    const bDate=new Date(b.updated_at).getTime()
-    return sortDir==='desc'?bDate-aDate:aDate-bDate
-  })
-  const filtered=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
-  const start=(page-1)*pageSize
-  const pageItems=filtered.slice(start,start+pageSize)
-  const totalPages=Math.max(1,Math.ceil(filtered.length/pageSize))
-  const projectsContent = busy ? <p>Carregando projetos…</p> : <ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handlePageChange} onSort={handleProjectSort} sortField={sortField} sortDir={sortDir}/>
-  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
-  async function decide(id:string,decision:'accept'|'decline'|'cancel',replace=false){try{await decideInvitation(id,decision,replace);setSwitchInvite(null);setMessage(decision==='accept'?'Convite aceito.':decision==='decline'?'Convite recusado.':'Convite cancelado.');await refresh()}catch(reason){setSwitchInvite(null);setMessage(reason instanceof Error?reason.message:'Falha ao decidir convite')}}
+  async function loadInvitations(){try{setInvitations(await listMyInvitations())}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar convites')}}
+  useEffect(()=>{void loadInvitations()},[])
+  useEffect(()=>{
+    let active=true
+    setBusy(true);setMessage('')
+    void listProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize)
+      .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
+      .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
+      .finally(()=>{if(active)setBusy(false)})
+    return()=>{active=false}
+  },[query,page,pageSize,sortField,sortDir])
+  const projectsContent = busy ? <p>Carregando projetos…</p> : <ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handlePageChange} onSort={handleProjectSort} sortField={sortField} sortDir={sortDir}/>
+  async function decide(id:string,decision:'accept'|'decline'|'cancel',replace=false){try{await decideInvitation(id,decision,replace);setSwitchInvite(null);setMessage(decision==='accept'?'Convite aceito.':decision==='decline'?'Convite recusado.':'Convite cancelado.');await loadInvitations();setPage(1)}catch(reason){setSwitchInvite(null);setMessage(reason instanceof Error?reason.message:'Falha ao decidir convite')}}
   if(!user.profile?.active_room)return <section className="management"><div><h2>Meus projetos</h2><p className="empty-state">Você ainda não possui uma sala ativa. Um professor precisa incluí-lo em uma sala antes da criação de novos projetos.</p></div></section>
   const pending=invitations.filter(item=>item.status==='PENDING')
   return <section className="projects-area" aria-labelledby="projects-title"><div className="projects-header"><div><span className="eyebrow">Controle acadêmico</span><h2 id="projects-title">Meus projetos</h2><p>Turma: {user.profile.class_offering_label}</p></div><button className="button" onClick={()=>navigateTo('#/projects/new')}>+ Criar projeto</button></div>{message&&<p role="status" className="alert">{message}</p>}<div className="projects-blocos">
     <div className="projects-main">
       <section className="bloco" aria-labelledby="projects-table-title">
-        <header className="bloco-header"><div><h3 id="projects-table-title">Lista de projetos</h3><p>Ordenados pela última atualização. Clique em um projeto para abrir.</p></div></header>
+        <header className="bloco-header"><div><h3 id="projects-table-title">Lista de projetos</h3><p>Ordenados pela última atualização. Clique em um projeto para abrir.</p></div><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label></header>
         <div className="project-table-wrap">{projectsContent}</div>
       </section>
     </div>
@@ -208,10 +203,6 @@ function ProjectsPanel({user}:{user:Profile}){
       </section>
     </aside>
   </div>{switchInvite&&<div className="modal-backdrop"><section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="switch-title"><h2 id="switch-title">Você já possui um grupo vigente</h2><p>Você já participa de <strong>{projects[0]?.name}</strong>. Solicite o cancelamento na página desse projeto e aguarde a decisão da Secretaria antes de aceitar outro grupo.</p><div className="action-row"><button className="button" onClick={()=>navigateTo(`#/projects/${projects[0]?.id}`)}>Abrir projeto vigente</button><button className="button secondary" onClick={()=>setSwitchInvite(null)}>Cancelar</button></div></section></div>}</section>
-}
-
-function ProjectCard({project}:{project:Project}){
-  return <article className="project-card"><div className="project-title"><div>{'number' in project&&<span className="eyebrow">Projeto #{String(project.number)}</span>}<h3>{project.name}</h3><p>{project.about}</p></div><span className="badge neutral">{projectStatusLabels[project.status]}</span></div><p><strong>Grupo:</strong> {groupLabels[project.group.formation_status]}</p><button className="button" onClick={()=>{window.location.hash=`#/projects/${project.id}`}}>Abrir página do projeto</button></article>
 }
 
 function ProjectGroupPanel({project,onChanged}:{project:Project;onChanged:()=>Promise<void>}){
@@ -289,7 +280,8 @@ function ProfessorExpertise(){
 }
 
 function ProfessorProjectOverview(){
-  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[query,setQuery]=useState('')
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[message,setMessage]=useState(''),[busy,setBusy]=useState(true),[query,setQuery]=useState('')
+  const pageSize=100
   const handleProfessorSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
     setSortDir(dir)
@@ -299,18 +291,17 @@ function ProfessorProjectOverview(){
     setPage(np)
     setBusy(true)
   }
-  async function refresh(){setBusy(true);try{const data=await listProfessorProjects();setProjects(data)}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')}finally{setBusy(false)}}
-  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
-  const ordered=[...projects].sort((a,b)=>{
-    const aDate=new Date(a.updated_at).getTime()
-    const bDate=new Date(b.updated_at).getTime()
-    return sortDir==='desc'?bDate-aDate:aDate-bDate
-  })
-  const filtered=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
-  const start=(page-1)*pageSize
-  const pageItems=filtered.slice(start,start+pageSize)
+  useEffect(()=>{
+    let active=true
+    setBusy(true);setMessage('')
+    void listProfessorProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField??'updated_at'}`,page,pageSize)
+      .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
+      .catch(reason=>{if(active)setMessage(reason instanceof Error?reason.message:'Falha ao carregar projetos')})
+      .finally(()=>{if(active)setBusy(false)})
+    return()=>{active=false}
+  },[query,page,pageSize,sortField,sortDir])
   if(message)return <p role="alert" className="alert error">{message}</p>
-  return <section><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div>{projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
+  return <section aria-busy={busy}><div className="subheading"><h2>Projetos sob minha responsabilidade</h2><p>Propostas aguardando análise e projetos orientados.</p></div><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label>{busy?<p role="status">Carregando projetos…</p>:projects.length===0?<p className="empty-state">Nenhum projeto atribuído.</p>:<><div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleProfessorPageChange} onSort={handleProfessorSort} sortField={sortField} sortDir={sortDir}/></div></>}</section>
 }
 
 function UserManagement(){
@@ -318,5 +309,5 @@ function UserManagement(){
   useEffect(()=>{listUsers().then(setUsers).catch(()=>setUsers([]))},[])
   useEffect(()=>{if(role==='STUDENT'){listCourses().then(setCourses).catch(()=>setCourses([]))}else{setCourses([])}},[role])
   async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setMessage('');const form=event.currentTarget,data=new FormData(form);const payload:NewUser={username:String(data.get('username')),password:String(data.get('password')),name:String(data.get('name')),email:String(data.get('email')??''),role,ra:String(data.get('ra')??''),cpf:String(data.get('cpf')??''),registration:String(data.get('registration')??''),course:role==='STUDENT'?String(data.get('course')??''):undefined};try{const created=await createUser(payload);setUsers(current=>[...current,created]);setMessage('Usuário criado com sucesso.');form.reset();setRole('STUDENT')}catch(reason){setMessage(reason instanceof Error?reason.message:'Falha ao criar usuário')}}
-  return <section className="management"><div><span className="eyebrow">Administração</span><h2>Criar usuário</h2><form className="user-form" onSubmit={submit}><label>Perfil<select name="role" value={role} onChange={event=>setRole(event.target.value as Role)}><option value="STUDENT">Aluno</option><option value="PROFESSOR">Professor</option><option value="ADMIN">Administrador</option><option value="ADMIN">Administrador</option></select></label><label>Nome<input name="name" required/></label><label>Usuário<input name="username" required/></label><label>Senha temporária<input name="password" type="password" minLength={12} required/></label><label>E-mail opcional<input name="email" type="email"/></label>{role==='STUDENT'&&<><label>Curso<select name="course" required>{courses.map(item=><option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}</select></label><label>RA<input name="ra" required/></label><label>CPF<input name="cpf" inputMode="numeric" required/></label></>}{role==='PROFESSOR'&&<label>Matrícula opcional<input name="registration"/></label>}<button className="button" type="submit">Criar usuário</button></form>{message&&<p role="status" className="alert">{message}</p>}</div><div><h2>Usuários cadastrados</h2>{users.length===0?<p className="empty-state">Nenhum usuário encontrado.</p>:<div className="table-wrap"><table><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th></tr></thead><tbody>{users.map(item=><tr key={item.id}><td>{item.name}</td><td>{item.username}</td><td><span className="badge neutral">{labels[item.role]}</span></td></tr>)}</tbody></table></div>}</div></section>
+  return <section className="management"><div><span className="eyebrow">Administração</span><h2>Criar usuário</h2><form className="user-form" onSubmit={submit}><label>Perfil<select name="role" value={role} onChange={event=>setRole(event.target.value as Role)}><option value="STUDENT">Aluno</option><option value="PROFESSOR">Professor</option><option value="ADMIN">Administrador</option></select></label><label>Nome<input name="name" required/></label><label>Usuário<input name="username" required/></label><label>Senha temporária<input name="password" type="password" minLength={12} required/></label><label>E-mail opcional<input name="email" type="email"/></label>{role==='STUDENT'&&<><label>Curso<select name="course" required>{courses.map(item=><option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}</select></label><label>RA<input name="ra" required/></label><label>CPF<input name="cpf" inputMode="numeric" required/></label></>}{role==='PROFESSOR'&&<label>Matrícula opcional<input name="registration"/></label>}<button className="button" type="submit">Criar usuário</button></form>{message&&<p role="status" className="alert">{message}</p>}</div><div><h2>Usuários cadastrados</h2>{users.length===0?<p className="empty-state">Nenhum usuário encontrado.</p>:<div className="table-wrap"><table><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th></tr></thead><tbody>{users.map(item=><tr key={item.id}><td>{item.name}</td><td>{item.username}</td><td><span className="badge neutral">{labels[item.role]}</span></td></tr>)}</tbody></table></div>}</div></section>
 }

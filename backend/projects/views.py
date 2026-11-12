@@ -21,6 +21,7 @@ from .models import (
     Project,
     ProjectMilestone,
 )
+from .pagination import ProjectPagination
 from .permissions import IsProfessor, IsStudent
 from .serializers import (
     CollaborationApplicationCreateSerializer,
@@ -57,7 +58,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     ordering_fields = ["created_at", "updated_at", "status", "name"]
     ordering = "-updated_at"
     search_fields = ["name", "about"]
-    page_size = 100
+    pagination_class = ProjectPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -72,6 +73,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
                     "groups__members__student__user",
                     "groups__responsible_professor__user",
                     "groups__evaluator__user",
+                    "groups__showcase_entry",
                 )
                 .distinct()
             )
@@ -86,6 +88,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
                     "groups__members__student__user",
                     "groups__responsible_professor__user",
                     "groups__evaluator__user",
+                    "groups__showcase_entry",
                 )
                 .distinct()
             )
@@ -97,6 +100,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
                     "groups__members__student__user",
                     "groups__responsible_professor__user",
                     "groups__evaluator__user",
+                    "groups__showcase_entry",
                 )
                 .distinct()
             )
@@ -471,7 +475,7 @@ class ProfessorProjectListView(generics.ListAPIView):
     ordering_fields = ["created_at", "updated_at", "status", "name"]
     ordering = "-updated_at"
     search_fields = ["name", "about"]
-    page_size = 100
+    pagination_class = ProjectPagination
 
     def get_queryset(self):
         profile = self.request.user.professor_profile
@@ -487,6 +491,7 @@ class ProfessorProjectListView(generics.ListAPIView):
                 "groups__members__student__user",
                 "groups__responsible_professor__user",
                 "groups__evaluator__user",
+                "groups__showcase_entry",
             )
             .distinct()
         )

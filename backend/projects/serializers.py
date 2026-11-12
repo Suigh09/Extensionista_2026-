@@ -87,6 +87,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     lifecycle = serializers.SerializerMethodField()
     cancellation_requests = serializers.SerializerMethodField()
     can_manage = serializers.SerializerMethodField()
+    class_offering_label = serializers.SerializerMethodField()
+    showcase_entry = serializers.SerializerMethodField()
 
     def get_can_manage(self, project):
         from rest_framework.exceptions import PermissionDenied
@@ -100,6 +102,32 @@ class ProjectSerializer(serializers.ModelSerializer):
             return True
         except PermissionDenied:
             return False
+
+    def get_class_offering_label(self, project):
+        offering = project.class_offering
+        if not offering:
+            return None
+        subject = getattr(offering, "subject", None)
+        code = getattr(subject, "code", None) if subject else None
+        parts = [part for part in (code, offering.term, offering.code) if part]
+        return " · ".join(parts) if parts else str(offering.pk)
+
+    def get_showcase_entry(self, project):
+        entry = None
+        groups = list(project.groups.all()) if hasattr(project, "groups") else []
+        for group in groups:
+            entry = getattr(group, "showcase_entry", None)
+            if entry is not None:
+                break
+        if entry is None:
+            return None
+        return {
+            "id": str(entry.pk),
+            "date": entry.date,
+            "end_date": entry.end_date,
+            "status": entry.status,
+            "location": entry.location,
+        }
 
     def get_lifecycle(self, project):
         return [{"id": event.pk, "action": event.action, "previous_status": event.previous_status,
@@ -140,6 +168,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "lifecycle",
             "cancellation_requests",
             "can_manage",
+            "class_offering_label",
+            "showcase_entry",
         ]
         read_only_fields = [
             "id",

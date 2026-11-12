@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from .lifecycle import assign_student, is_admin, require_room_manager, transition
 from .models import Project, ProjectTheme
+from .pagination import ProjectPagination
 from .serializers import EligibleStudentSerializer, ProjectSerializer
 from .services import accessible_project, audit
 
@@ -190,18 +191,19 @@ class InstitutionalProjectsView(generics.ListAPIView):
     ordering_fields = ["created_at", "updated_at", "status", "name"]
     ordering = "-updated_at"
     search_fields = ["name", "about"]
-    page_size = 100
+    pagination_class = ProjectPagination
 
     def get_queryset(self):
         if not is_admin(self.request.user):
             raise PermissionDenied("Área disponível ao Administrador.")
         return (
-            Project.objects.filter(is_active=True)
+            Project.objects.all()
             .select_related("class_offering", "theme")
             .prefetch_related(
                 "groups__members__student__user",
                 "groups__responsible_professor__user",
                 "groups__evaluator__user",
+                "groups__showcase_entry",
             )
             .distinct()
         )

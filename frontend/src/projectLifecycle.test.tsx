@@ -1,11 +1,11 @@
 import{cleanup,fireEvent,render,screen}from'@testing-library/react'
 import userEvent from'@testing-library/user-event'
 import{afterEach,describe,expect,it,vi}from'vitest'
-import{assignProjectStudent,createProject,listThemes,projectTransition,searchThemeStudents}from'./api'
+import{assignProjectStudent,createProject,listInstitutionalProjectsPaginated,listThemes,projectTransition,searchThemeStudents}from'./api'
 import type{Profile,Project,ProjectTheme}from'./api'
-import{LifecyclePanel,ProfessorGroupAssignment,ThemeProjectCreate}from'./projectLifecycle'
+import{InstitutionalProjects,LifecyclePanel,ProfessorGroupAssignment,ThemeProjectCreate}from'./projectLifecycle'
 
-vi.mock('./api',()=>({listThemes:vi.fn(),createProject:vi.fn(),listRooms:vi.fn(),saveTheme:vi.fn(),updateTheme:vi.fn(),searchThemeStudents:vi.fn(),projectTransition:vi.fn(),assignProjectStudent:vi.fn(),listInstitutionalProjects:vi.fn()}))
+vi.mock('./api',()=>({listThemes:vi.fn(),createProject:vi.fn(),listRooms:vi.fn(),saveTheme:vi.fn(),updateTheme:vi.fn(),searchThemeStudents:vi.fn(),projectTransition:vi.fn(),assignProjectStudent:vi.fn(),listInstitutionalProjectsPaginated:vi.fn()}))
 
 const listThemesMock=vi.mocked(listThemes)
 const createProjectMock=vi.mocked(createProject)
@@ -22,6 +22,24 @@ const theme={id:'theme-1',title:'Tema Cidadania',description:'Orientações',roo
 function draftProject(status:Project['status']='DRAFT'):Project{
   return{id:'project-1',name:'Projeto Cidadania',about:'Proposta.',status,theme:'theme-1',theme_snapshot:{title:'Tema Cidadania',description:'Orientações'},can_manage:true}as Project
 }
+
+describe('lista institucional paginada',()=>{
+  it('consome a página real e consulta a próxima sem cortar resultados localmente',async()=>{
+    const request=vi.mocked(listInstitutionalProjectsPaginated)
+    request.mockResolvedValue({count:101,next:null,previous:null,results:[{...draftProject(),number:1,created_at:'2026-11-01T10:00:00Z',updated_at:'2026-11-02T10:00:00Z'}]})
+    const user=userEvent.setup()
+    render(<InstitutionalProjects/>)
+    expect(await screen.findByRole('grid',{name:'Projetos'})).toBeInTheDocument()
+    expect(screen.getAllByRole('columnheader')).toHaveLength(14)
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(request).toHaveBeenCalledWith('','-updated_at',1,100)
+    await user.click(screen.getByRole('button',{name:'Próxima'}))
+    await vi.waitFor(()=>expect(request).toHaveBeenCalledWith('','-updated_at',2,100))
+    await screen.findByRole('grid',{name:'Projetos'})
+    await user.click(screen.getByRole('columnheader',{name:'Título'}))
+    await vi.waitFor(()=>expect(request).toHaveBeenCalledWith('','name',1,100))
+  })
+})
 
 describe('criação de projeto por tema',()=>{
   it('estudante cria projeto informando o tema da sala',async()=>{

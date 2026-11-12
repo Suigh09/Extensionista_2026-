@@ -333,7 +333,9 @@ def test_golden_flow_interdisciplinary_partnership(academic_context):
     professor_client.force_authenticate(professor_user)
     assert any(
         item["id"] == str(target.pk)
-        for item in professor_client.get("/api/v1/projects/available-to-professor/").json()
+        for item in professor_client.get(
+            "/api/v1/projects/available-to-professor/"
+        ).json()["results"]
     )
     assert AuditEvent.objects.filter(
         actor=publisher_user, action="CREATE_COLLABORATION_OPPORTUNITY"

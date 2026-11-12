@@ -10,7 +10,8 @@ export type NewUser={username:string;password:string;name:string;email?:string;r
 export type Member={user_id:string;student_id:number;name:string;ra:string;joined_at:string}
 export type ProjectGroup={id:string;name:string;class_offering:string;member_count:number;formation_status:'FORMING'|'FORMED'|'COMPLETE';members:Member[];responsible_professor_name:string|null;evaluator_name:string|null;leader?:number|null;leader_user_id?:string|null}
 export type ProjectStatus='DRAFT'|'PENDING_APPROVAL'|'CHANGES_REQUESTED'|'APPROVED'|'COMPLETED'|'ARCHIVED'|'PAUSED'|'CANCELLED'
-export type Project={id:string;number:number;name:string;about:string;class_offering:string;status:ProjectStatus;is_active:boolean;created_at:string;updated_at:string;created_by_name:string;submitted_at:string|null;reviewed_at:string|null;review_feedback:string;reviewed_by:string|null;group:ProjectGroup;groups?:ProjectGroup[];theme?:string|null;theme_snapshot?:{title?:string;description?:string};previous_status?:ProjectStatus;can_manage?:boolean;lifecycle?:{id:number;action:string;previous_status:string;new_status:string;reason:string;actor_name:string;created_at:string}[];cancellation_requests?:{id:string;reason:string;status:string;requested_by_name:string;decision_note:string;created_at:string;decided_at:string|null}[]}
+export type ShowcaseEntrySummary={id:string;date:string;end_date:string|null;status:string;location:string}
+export type Project={id:string;number:number;name:string;about:string;class_offering:string;class_offering_label?:string|null;status:ProjectStatus;is_active:boolean;created_at:string;updated_at:string;created_by_name:string;submitted_at:string|null;reviewed_at:string|null;review_feedback:string;reviewed_by:string|null;group:ProjectGroup;groups?:ProjectGroup[];theme?:string|null;theme_snapshot?:{title?:string;description?:string};previous_status?:ProjectStatus;can_manage?:boolean;showcase_entry?:ShowcaseEntrySummary|null;lifecycle?:{id:number;action:string;previous_status:string;new_status:string;reason:string;actor_name:string;created_at:string}[];cancellation_requests?:{id:string;reason:string;status:string;requested_by_name:string;decision_note:string;created_at:string;decided_at:string|null}[]}
 export type NumberedProject=Project&{number:number}
 export type Invitation={id:string;group:string;project_name:string;invitee_user_id:string;invitee_name:string;invitee_ra:string;status:'PENDING'|'ACCEPTED'|'DECLINED'|'CANCELLED';created_at:string;decided_at:string|null}
 export type EligibleStudent={id:string;user:string;name:string;ra:string;course_name:string;class_code:string;term:string}
@@ -46,7 +47,7 @@ export type PaginatedProjects={
   results:Project[]
 }
 
-export const listProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/?q=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
 export const getProject=(projectId:string)=>request<Project>(`/projects/${projectId}/`)
 export const createProject=(project:{name:string;about:string;theme:string;leader?:number;student_ids?:number[]})=>request<Project>('/projects/',{method:'POST',body:JSON.stringify(project)})
 export const updateProject=(projectId:string,project:{name:string;about:string})=>request<Project>(`/projects/${projectId}/`,{method:'PATCH',body:JSON.stringify(project)})
@@ -65,7 +66,7 @@ export const listTimeline=(projectId:string)=>request<TimelineItem[]>(`/projects
 export const listProjectMilestones=(projectId:string)=>request<Milestone[]>(`/projects/${projectId}/milestones/`)
 export const listProfessorProjects=()=>request<Project[]>('/projects/available-to-professor/')
 
-export const listProfessorProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/available-to-professor/?q=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listProfessorProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/available-to-professor/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
 export const listMilestones=()=>request<Milestone[]>('/projects/milestones/')
 export const createMilestone=(data:{title:string;description:string;due_at:string;scope:'PROJECTS'|'CLASS';requires_delivery:boolean;requires_approval:boolean;class_offering?:string;project_ids?:string[]})=>request<Milestone>('/projects/milestones/',{method:'POST',body:JSON.stringify(data)})
 export const listCollaborationOpportunities=(query='')=>request<CollaborationOpportunity[]>(`/projects/collaborations/opportunities/?q=${encodeURIComponent(query)}`)
@@ -95,7 +96,7 @@ export const projectTransition=(id:string,action:string,reason:string)=>request<
 export const assignProjectStudent=(id:string,student_id:number,make_leader=false)=>request<Project>(`/projects/${id}/assign-student/`,{method:'POST',body:JSON.stringify({student_id,make_leader})})
 export const listInstitutionalProjects=()=>request<Project[]>('/projects/institutional/')
 
-export const listInstitutionalProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/institutional/?q=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
+export const listInstitutionalProjectsPaginated=(query='',ordering='-updated_at',page=1,pageSize=100)=>request<PaginatedProjects>(`/projects/institutional/?search=${encodeURIComponent(query)}&ordering=${encodeURIComponent(ordering)}&page=${page}&page_size=${pageSize}`)
 
 export type DeliveryStatus='SUBMITTED'|'APPROVED'|'CHANGES_REQUESTED'
 export type Delivery={id:string;project:string;group:string;group_name:string;version:number;title_snapshot:string;about_snapshot:string;notes:string;original_name:string;content_type:string;size:number;status:DeliveryStatus;submitted_by_name:string;submitted_at:string;review_feedback:string;reviewed_by_name:string|null;reviewed_at:string|null;download_url:string}

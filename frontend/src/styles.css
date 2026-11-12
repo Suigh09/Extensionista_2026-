@@ -243,8 +243,4 @@ fieldset input{width:auto}
     padding:.55rem .4rem;
     font-size:.82rem;
   }
-  .project-list-table td.col-person,
-  .project-list-table td.col-theme{
-    display:none;
-  }
 }

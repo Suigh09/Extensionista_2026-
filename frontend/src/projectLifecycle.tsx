@@ -1,5 +1,5 @@
-import {useCallback,useEffect,useState,type FormEvent} from 'react'
-import {assignProjectStudent,createProject,listInstitutionalProjects,listInstitutionalProjectsPaginated,listRooms,listThemes,projectTransition,saveTheme,searchThemeStudents,updateTheme,type AcademicRoom,type EligibleStudent,type Profile,type Project,type ProjectTheme} from './api'
+import {useEffect,useState,type FormEvent} from 'react'
+import {assignProjectStudent,createProject,listInstitutionalProjectsPaginated,listRooms,listThemes,projectTransition,saveTheme,searchThemeStudents,updateTheme,type AcademicRoom,type EligibleStudent,type Profile,type Project,type ProjectTheme} from './api'
 import {ProjectListTable} from './projectList'
 const saved=()=>window.dispatchEvent(new Event('platform:changes-saved'))
 const navigate=(hash:string)=>window.dispatchEvent(new CustomEvent('platform:navigate',{detail:hash}))
@@ -47,7 +47,8 @@ export function ProfessorGroupAssignment({project,onChanged}:{project:Project;on
 }
 
 export function InstitutionalProjects(){
-  const[projects,setProjects]=useState<Project[]>([]),[filtered,setFiltered]=useState<Project[]>([]),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100),[sortField,setSortField]=useState<string|null>('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[query,setQuery]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(true)
+  const[projects,setProjects]=useState<Project[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[sortField,setSortField]=useState('updated_at'),[sortDir,setSortDir]=useState<'asc'|'desc'>('desc'),[query,setQuery]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(true)
+  const pageSize=100
   const handleInstSort=(field:string,dir:'asc'|'desc')=>{
     setSortField(field)
     setSortDir(dir)
@@ -55,17 +56,15 @@ export function InstitutionalProjects(){
   }
   const handleInstPageChange=(np:number)=>{
     setPage(np)
-    setBusy(true)
   }
-  async function refresh(){setBusy(true);try{const data=await listInstitutionalProjects();const ordered=[...data].sort((a,b)=>{
-    const aDate=new Date(a.updated_at).getTime()
-    const bDate=new Date(b.updated_at).getTime()
-    return sortDir==='desc'?bDate-aDate:aDate-bDate
-  })
-  const f=ordered.filter(p=>!query||p.name.toLowerCase().includes(query.toLowerCase())||p.about.toLowerCase().includes(query.toLowerCase()))
-  setProjects(f);setFiltered(f)}catch(e){setError(failure(e))}finally{setBusy(false)}}
-  useEffect(()=>{void refresh()},[query,page,pageSize,sortField,sortDir])
-  const start=(page-1)*pageSize
-  const pageItems=filtered.slice(start,start+pageSize)
-  return <section><h2>Projetos institucionais</h2>{error&&<p role="alert" className="alert error">{error}</p>}{projects.length===0?<p>Nenhum projeto disponível.</p>:<div className="project-table-wrap"><ProjectListTable projects={pageItems} total={filtered.length} page={page} pageSize={pageSize} onPageChange={handleInstPageChange} onSort={handleInstSort} sortField={sortField} sortDir={sortDir}/></div>}</section>
+  useEffect(()=>{
+    let active=true
+    setBusy(true);setError('')
+    void listInstitutionalProjectsPaginated(query,`${sortDir==='desc'?'-':''}${sortField}`,page,pageSize)
+      .then(data=>{if(active){setProjects(data.results);setTotal(data.count)}})
+      .catch(e=>{if(active)setError(failure(e))})
+      .finally(()=>{if(active)setBusy(false)})
+    return()=>{active=false}
+  },[query,page,sortField,sortDir])
+  return <section aria-busy={busy}><h2>Projetos institucionais</h2><label>Pesquisar projetos<input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label>{error&&<p role="alert" className="alert error">{error}</p>}{busy?<p role="status">Carregando projetos…</p>:!error&&<div className="project-table-wrap"><ProjectListTable projects={projects} total={total} page={page} pageSize={pageSize} onPageChange={handleInstPageChange} onSort={handleInstSort} sortField={sortField} sortDir={sortDir}/></div>}</section>
 }

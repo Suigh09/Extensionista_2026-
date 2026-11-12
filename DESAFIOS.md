@@ -2,6 +2,8 @@
 
 ## Windows / PowerShell
 
+- Vite com caminho absoluto do executável não fixa a raiz servida. Passar também a pasta `frontend` como argumento posicional absoluto; caso contrário pode servir o repositório (`/` 404, `/frontend/index.html` 200) e não carregar proxy. Diferenciar HTTP 404 de ausência de listener; preservar a mensagem real da exceção.
+
 - GitHub pode permitir WRITE no repo, mas recusar push que altera workflow se o
   token OAuth não tiver scope workflow. Não retirar o CI nem forçar push para
   contornar: renovar com gh auth refresh --hostname github.com --scopes workflow
